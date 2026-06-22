@@ -9,7 +9,24 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
-            darkMode: 'class'
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        sevGreen: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            600: '#00843D',
+                            700: '#006c31',
+                            950: '#022c16',
+                        },
+                        sevOrange: {
+                            500: '#EE2E24',
+                            600: '#d62219',
+                        }
+                    }
+                }
+            }
         }
     </script>
     <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
@@ -17,18 +34,15 @@
 
     <style>
         @media print {
-            /* Ẩn các khu vực không liên quan đến báo cáo */
-            .no-print, #camera-container, button, #themeToggleBtn, .bg-slate-900 {
+            .no-print, #camera-container, button, #themeToggleBtn, .bg-zinc-900 {
                 display: none !important;
             }
-            /* Ép toàn bộ trang về nền trắng chữ đen để tiết kiệm mực */
             body {
                 background: white !important;
                 color: black !important;
                 padding: 0 !important;
                 margin: 0 !important;
             }
-            /* Mở rộng bảng dữ liệu ra toàn màn hình khổ giấy */
             .print-full-width {
                 grid-template-columns: 100% !important;
                 width: 100% !important;
@@ -38,87 +52,85 @@
                 border: none !important;
                 padding: 0 !important;
             }
-            /* Đảm bảo các ô highlight màu nhẹ (Mã rút, ngày phải rút) hiển thị rõ trên giấy */
             tr, td, th {
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
-                color: black !important; /* Ép chữ tất cả các ô về màu đen rõ nét */
+                color: black !important;
             }
-            /* Giữ chữ màu trắng cho riêng thanh tiêu đề của bảng */
             thead tr th {
                 color: white !important;
-                background-color: #1e293b !important; /* Màu xanh đen Slate đậm làm nền tiêu đề */
+                background-color: #00843D !important; /* Đổi sang màu xanh lá 7-Eleven khi in */
             }
         }
     </style>
 </head>
-<body class="bg-slate-100 dark:bg-slate-900 min-h-screen p-4 md:p-8 text-slate-800 dark:text-slate-100 transition-colors duration-300">
+<body class="bg-zinc-100 dark:bg-zinc-900 min-h-screen p-4 md:p-8 text-zinc-800 dark:text-zinc-100 transition-colors duration-300">
 
     <div class="max-w-7xl mx-auto">
-        <div class="no-print bg-slate-900 dark:bg-slate-950 text-white p-5 rounded-xl shadow-md mb-6 border-b-4 border-amber-500 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div class="no-print bg-zinc-900 dark:bg-zinc-950 text-white p-5 rounded-2xl shadow-md mb-6 border-b-4 border-sevOrange-500 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div class="flex items-center gap-4">
-                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/40/7-eleven_logo.svg/960px-7-eleven_logo.svg.png" alt="Logo" class="w-14 h-14 rounded-xl object-cover bg-white p-0.5 shadow-inner shrink-0">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/40/7-eleven_logo.svg/960px-7-eleven_logo.svg.png" alt="Logo" class="w-14 h-14 rounded-2xl object-cover bg-white p-0.5 shadow-inner shrink-0">
                 <div>
-                    <h1 class="text-2xl font-bold tracking-wide text-amber-400">1167-Trương Định, WEBAPP KIỂM DATE NỘI BỘ</h1>
-                    <p class="text-slate-300 text-sm mt-0.5">Thực hiện bởi Lâm Huy</p>
+                    <h1 class="text-2xl font-bold tracking-wide text-white">1167-Trương Định <span class="text-sevOrange-500">|</span> <span class="text-emerald-400">WEBAPP KIỂM DATE NỘI BỘ</span></h1>
+                    <p class="text-zinc-400 text-sm mt-0.5">Thực hiện bởi Lâm Huy</p>
                 </div>
             </div>
-            <button onclick="toggleTheme()" id="themeToggleBtn" class="bg-slate-800 hover:bg-slate-700 text-amber-400 dark:text-amber-300 border border-slate-700 px-4 py-2 rounded-xl text-sm font-semibold transition flex items-center gap-2 shadow-sm shrink-0 self-end sm:self-auto">
+            <button onclick="toggleTheme()" id="themeToggleBtn" class="bg-zinc-800 hover:bg-zinc-700 text-emerald-400 dark:text-emerald-300 border border-zinc-700 px-4 py-2 rounded-xl text-sm font-semibold transition flex items-center gap-2 shadow-sm shrink-0 self-end sm:self-auto">
                 🌙 Chế độ tối
             </button>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 print-full-width">
             
-            <div class="no-print bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 h-fit transition-colors duration-300">
-                <div class="flex items-center justify-between mb-4 border-b dark:border-slate-700 pb-2">
-                    <h2 class="text-lg font-semibold text-slate-800 dark:text-white">Thông Tin Kiểm Kê</h2>
+            <div class="no-print bg-white dark:bg-zinc-800 p-6 rounded-2xl shadow-sm border border-zinc-200 dark:border-zinc-700 h-fit transition-colors duration-300">
+                <div class="flex items-center justify-between mb-4 border-b dark:border-zinc-700 pb-2">
+                    <h2 class="text-lg font-semibold text-zinc-800 dark:text-white">Thông Tin Kiểm Kê</h2>
                     <span id="syncStatus" class="text-xs bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400 px-2 py-0.5 rounded-full font-medium animate-pulse">⏳ Đang tải Danh mục...</span>
                 </div>
                 
                 <div class="space-y-4">
-                    <div class="bg-slate-50 dark:bg-slate-900/50 p-3 rounded-lg border border-slate-200 dark:border-slate-700">
-                        <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">👤 Tên Nhân Viên Kiểm Date</label>
-                        <input type="text" id="employeeName" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-amber-500 font-medium bg-white dark:bg-slate-700 dark:text-white" placeholder="Nhập tên của bạn...">
+                    <div class="bg-zinc-50 dark:bg-zinc-900/50 p-3 rounded-xl border border-zinc-200 dark:border-zinc-700">
+                        <label class="block text-sm font-semibold text-zinc-700 dark:text-zinc-300 mb-1">👤 Tên Nhân Viên Kiểm Date</label>
+                        <input type="text" id="employeeName" class="w-full border border-zinc-300 dark:border-zinc-600 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sevGreen-600 font-medium bg-white dark:bg-zinc-700 dark:text-white" placeholder="Nhập tên của bạn...">
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">Mã Barcode</label>
+                        <label class="block text-sm font-medium text-zinc-600 dark:text-zinc-300 mb-1">Mã Barcode</label>
                         <div class="flex gap-2">
-                            <input type="text" id="barcode" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-amber-500 font-mono bg-white dark:bg-slate-700 dark:text-white" placeholder="Nhập hoặc quét mã...">
-                            <button onclick="toggleCamera()" class="bg-slate-800 dark:bg-slate-950 text-white px-3 py-2 rounded-lg text-xs font-medium hover:bg-slate-700 transition">📷 Camera</button>
+                            <input type="text" id="barcode" class="w-full border border-zinc-300 dark:border-zinc-600 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sevGreen-600 font-mono bg-white dark:bg-zinc-700 dark:text-white" placeholder="Nhập hoặc quét mã...">
+                            <button onclick="toggleCamera()" class="bg-zinc-800 dark:bg-zinc-950 text-white px-3 py-2 rounded-xl text-xs font-medium hover:bg-zinc-700 transition">📷 Camera</button>
                         </div>
-                        <div id="camera-container" class="hidden border-2 border-dashed border-slate-400 dark:border-slate-600 rounded-lg p-2 bg-slate-50 dark:bg-slate-900 mt-2">
-                            <div id="reader" class="w-full rounded-lg overflow-hidden"></div>
-                            <button onclick="stopCamera()" class="w-full mt-2 bg-rose-500 text-white text-xs py-1.5 rounded-lg">Tắt Camera</button>
+                        <div id="camera-container" class="hidden border-2 border-dashed border-zinc-400 dark:border-zinc-600 rounded-xl p-2 bg-zinc-50 dark:bg-zinc-900 mt-2">
+                            <div id="reader" class="w-full rounded-xl overflow-hidden"></div>
+                            <button onclick="stopCamera()" class="w-full mt-2 bg-rose-500 text-white text-xs py-1.5 rounded-xl">Tắt Camera</button>
                         </div>
-                        <p id="memoryAlert" class="text-xs mt-1 min-h-[16px] font-medium text-slate-400 dark:text-slate-400"></p>
+                        <p id="memoryAlert" class="text-xs mt-1 min-h-[16px] font-medium text-zinc-400 dark:text-zinc-400"></p>
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">Tên Sản Phẩm</label>
-                        <input type="text" id="productName" list="productOptions" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-amber-500 font-medium bg-amber-50/40 dark:bg-slate-700 dark:text-white" placeholder="Chọn hoặc nhập tên sản phẩm...">
+                        <label class="block text-sm font-medium text-zinc-600 dark:text-zinc-300 mb-1">Tên Sản Phẩm</label>
+                        <input type="text" id="productName" list="productOptions" class="w-full border border-zinc-300 dark:border-zinc-600 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sevGreen-600 font-medium bg-emerald-50/20 dark:bg-zinc-700 dark:text-white" placeholder="Chọn hoặc nhập tên sản phẩm...">
                         <datalist id="productOptions"></datalist>
                         
-                        <div class="text-xs font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-900 p-2 rounded-lg border border-dashed border-slate-300 dark:border-slate-700 mt-1.5 flex justify-between items-center">
+                        <div class="text-xs font-medium text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-900 p-2 rounded-xl border border-dashed border-zinc-300 dark:border-zinc-700 mt-1.5 flex justify-between items-center">
                             <span>🔄 Chính sách Đổi trả NCC:</span>
-                            <span id="returnPolicyView" class="font-bold text-teal-700 dark:text-teal-400 bg-teal-50 dark:bg-teal-950/40 px-2 py-0.5 rounded border border-teal-200 dark:border-teal-900">-</span>
+                            <span id="returnPolicyView" class="font-bold text-teal-700 dark:text-teal-400 bg-teal-50 dark:bg-teal-950/40 px-2 py-0.5 rounded-md border border-teal-200 dark:border-teal-900">-</span>
                         </div>
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">Số Lượng Sản Phẩm</label>
-                        <input type="number" id="quantity" min="1" value="1" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-amber-500 font-bold text-slate-700 dark:text-white bg-white dark:bg-slate-700">
+                        <label class="block text-sm font-medium text-zinc-600 dark:text-zinc-300 mb-1">Số Lượng Sản Phẩm</label>
+                        <input type="number" id="quantity" min="1" value="1" class="w-full border border-zinc-300 dark:border-zinc-600 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sevGreen-600 font-bold text-zinc-700 dark:text-white bg-white dark:bg-zinc-700">
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">Ngày hết hạn (Expiry Date)</label>
-                        <input type="date" id="expiryDate" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-amber-500 font-bold text-slate-700 dark:text-white bg-white dark:bg-slate-700">
+                        <label class="block text-sm font-medium text-zinc-600 dark:text-zinc-300 mb-1">Ngày hết hạn (Expiry Date)</label>
+                        <input type="date" id="expiryDate" class="w-full border border-zinc-300 dark:border-zinc-600 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sevGreen-600 font-bold text-zinc-700 dark:text-white bg-white dark:bg-zinc-700">
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">Quy định rút hàng</label>
-                        <select id="pullType" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-amber-500 bg-blue-50 dark:bg-slate-700 font-bold text-blue-800 dark:text-blue-300">
+                        <label class="block text-sm font-medium text-zinc-600 dark:text-zinc-300 mb-1">Quy định rút hàng</label>
+                        <select id="pullType" class="w-full border border-zinc-300 dark:border-zinc-600 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sevGreen-600 bg-emerald-50/40 dark:bg-zinc-700 font-bold text-sevGreen-700 dark:text-emerald-400">
                             <option value="H-2">H-2 (Rút trước khi hết date 2 giờ)</option>
                             <option value="D-1">D-1 (Rút trước khi hết date 1 ngày)</option>
                             <option value="D-3">D-3 (Rút trước khi hết date 3 ngày)</option>
@@ -127,52 +139,51 @@
                         </select>
                     </div>
 
-                    <button onclick="addItem()" class="w-full bg-amber-500 text-slate-900 font-bold py-2.5 rounded-lg text-sm hover:bg-amber-600 transition shadow-sm mt-2">Ghi Nhận Kiểm Date</button>
+                    <button onclick="addItem()" class="w-full bg-sevOrange-500 text-white font-bold py-2.5 rounded-xl text-sm hover:bg-sevOrange-600 transition shadow-sm mt-2 tracking-wide">Ghi Nhận Kiểm Date</button>
                 </div>
             </div>
 
-            <div class="lg:col-span-2 bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 transition-colors duration-300 print-table-container">
+            <div class="lg:col-span-2 bg-white dark:bg-zinc-800 p-6 rounded-2xl shadow-sm border border-zinc-200 dark:border-zinc-700 transition-colors duration-300 print-table-container">
                 <div class="flex flex-wrap justify-between items-center mb-4 gap-2">
-                    <h2 class="text-lg font-semibold text-slate-800 dark:text-white print:text-xl print:font-bold">Danh Sách Báo Cáo Date Trong Ca</h2>
+                    <h2 class="text-lg font-semibold text-zinc-800 dark:text-white print:text-xl print:font-bold">Danh Sách Báo Cáo Date Trong Ca</h2>
                     
                     <div class="no-print flex gap-2">
-                        <button onclick="window.print()" class="bg-blue-600 text-white font-medium px-4 py-2 rounded-lg text-sm hover:bg-blue-700 transition shadow-sm flex items-center gap-1">
+                        <button onclick="window.print()" class="bg-sevGreen-600 text-white font-medium px-4 py-2 rounded-xl text-sm hover:bg-sevGreen-700 transition shadow-sm flex items-center gap-1">
                             🖨️ In Trực Tiếp
                         </button>
-                        <button onclick="exportToExcel()" class="bg-emerald-600 text-white font-medium px-4 py-2 rounded-lg text-sm hover:bg-emerald-700 transition shadow-sm">
+                        <button onclick="exportToExcel()" class="bg-emerald-600 text-white font-medium px-4 py-2 rounded-xl text-sm hover:bg-emerald-700 transition shadow-sm">
                             📦 Xuất Excel (.xlsx)
                         </button>
                     </div>
                 </div>
 
-                <div class="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
+                <div class="overflow-x-auto rounded-xl border border-zinc-200 dark:border-zinc-700">
                     <table class="w-full text-left text-sm border-collapse">
                         <thead>
-                            <tr class="bg-slate-800 dark:bg-slate-950 border-b border-slate-700 text-white font-medium">
+                            <tr class="bg-sevGreen-600 dark:bg-sevGreen-950 border-b border-sevGreen-700 text-white font-medium">
                                 <th class="p-3">Barcode</th>
                                 <th class="p-3">Tên Sản Phẩm</th>
-                                <th class="p-3 text-center bg-slate-700 dark:bg-slate-900">SL</th>
+                                <th class="p-3 text-center bg-sevGreen-700 dark:bg-zinc-900">SL</th>
                                 <th class="p-3">Ngày Hết Hạn</th>
-                                <th class="p-3 text-center bg-blue-900 dark:bg-blue-950">Mã Rút</th>
-                                <th onclick="toggleSortPullDate()" class="p-3 text-center bg-amber-600 dark:bg-amber-700 text-slate-900 dark:text-white font-bold cursor-pointer select-none hover:bg-amber-500 transition shadow-inner">
+                                <th class="p-3 text-center bg-emerald-900 dark:bg-emerald-950">Mã Rút</th>
+                                <th onclick="toggleSortPullDate()" class="p-3 text-center bg-sevOrange-500 text-white font-bold cursor-pointer select-none hover:bg-sevOrange-600 transition shadow-inner">
                                     Ngày Phải Rút <span id="sortIcon" class="text-xs ml-0.5">↕</span>
                                 </th>
-                                <th class="p-3 bg-indigo-900 dark:bg-indigo-950 text-center">Ngày Giờ Quét</th>
+                                <th class="p-3 bg-zinc-800 dark:bg-zinc-950 text-center">Ngày Giờ Quét</th>
                                 <th class="p-3 bg-teal-800 dark:bg-teal-950 text-center">Đổi Trả NCC</th>
-                                <th class="p-3 bg-slate-700 dark:bg-slate-900 text-center">Nhân Viên</th>
+                                <th class="p-3 bg-zinc-700 dark:bg-zinc-900 text-center">Nhân Viên</th>
                                 <th class="p-3 text-center no-print">Xóa</th>
                             </tr>
                         </thead>
                         <tbody id="dateInventoryList"></tbody>
                     </table>
                 </div>
-                <div id="emptyAlert" class="text-center py-8 text-slate-400 dark:text-slate-500 text-sm">Chưa có dữ liệu kiểm date nào được nhập.</div>
+                <div id="emptyAlert" class="text-center py-8 text-zinc-400 dark:text-zinc-500 text-sm">Chưa có dữ liệu kiểm date nào được nhập.</div>
             </div>
         </div>
     </div>
 
     <script>
-        // 🔴 ĐIỀN ĐƯỜNG LINK URL GOOGLE APPS SCRIPT CỦA BẠN VÀO ĐÂY:
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwW_I_-IC1AX6aejMpahYeYjzTwv6jkdNHpnH6C0gXth5PzS7eqsAmU-HVFOizEkW0rEg/exec";
 
         let dateInventory = JSON.parse(localStorage.getItem('date_inventory_return')) || [];
@@ -208,17 +219,16 @@
         }
         updateThemeButton();
 
-        // --- ⚙️ BỘ LỌC THÔNG MINH: TỰ ĐỘNG KHỬ DARK MODE KHI IN ẤN ---
         window.addEventListener('beforeprint', () => {
             if (document.documentElement.classList.contains('dark')) {
                 document.documentElement.classList.remove('dark');
-                document.documentElement.dataset.wasDark = "true"; // Đánh dấu đã từng ở Dark Mode
+                document.documentElement.dataset.wasDark = "true";
             }
         });
 
         window.addEventListener('afterprint', () => {
             if (document.documentElement.dataset.wasDark === "true") {
-                document.documentElement.classList.add('dark'); // Khôi phục lại Dark Mode ngay sau khi đóng hộp thoại in
+                document.documentElement.classList.add('dark');
                 delete document.documentElement.dataset.wasDark;
             }
         });
@@ -278,7 +288,7 @@
                 currentReturnPolicy = matchedMaster.returnPolicy || "-";
                 document.getElementById('returnPolicyView').textContent = currentReturnPolicy;
                 alertBox.textContent = "📦 Khớp dữ liệu danh mục hệ thống!";
-                alertBox.className = "text-xs mt-1 min-h-[16px] font-medium text-blue-600 dark:text-blue-400";
+                alertBox.className = "text-xs mt-1 min-h-[16px] font-medium text-emerald-600 dark:text-emerald-400";
                 playBeep('scan'); 
                 return;
             }
@@ -289,11 +299,11 @@
                 currentReturnPolicy = found.returnPolicy || "-";
                 document.getElementById('returnPolicyView').textContent = currentReturnPolicy;
                 alertBox.textContent = "⚡ Tự động lấy tên từ lịch sử ca trực!";
-                alertBox.className = "text-xs mt-1 min-h-[16px] font-medium text-emerald-600 dark:text-emerald-400";
+                alertBox.className = "text-xs mt-1 min-h-[16px] font-medium text-teal-600 dark:text-teal-400";
                 playBeep('scan');
             } else {
                 alertBox.textContent = "🔍 Mã mới hoàn toàn (chưa có dữ liệu)";
-                alertBox.className = "text-xs mt-1 min-h-[16px] font-medium text-slate-400 dark:text-slate-500";
+                alertBox.className = "text-xs mt-1 min-h-[16px] font-medium text-zinc-400 dark:text-zinc-500";
                 currentReturnPolicy = "-";
                 document.getElementById('returnPolicyView').textContent = "-";
             }
@@ -382,16 +392,16 @@
                 let formattedExp = `${expParts[2]}/${expParts[1]}/${expParts[0]}`;
 
                 tbody.innerHTML += `
-                    <tr class="border-b border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/40 transition">
-                        <td class="p-3 font-mono text-xs text-slate-500 dark:text-slate-400">${item.barcode || '---'}</td>
-                        <td class="p-3 font-medium text-slate-800 dark:text-slate-200">${item.name}</td>
-                        <td class="p-3 text-center font-bold text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-900/40 print:bg-white">${item.quantity}</td>
-                        <td class="p-3 font-medium text-slate-600 dark:text-slate-300">${formattedExp}</td>
-                        <td class="p-3 text-center font-bold text-blue-700 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-950/20 print:bg-white">${item.pullType}</td>
-                        <td class="p-3 text-center font-bold text-amber-700 dark:text-amber-400 bg-amber-50/70 dark:bg-amber-950/30 print:bg-white">${item.pullDate}</td>
-                        <td class="p-3 text-center font-mono text-xs text-indigo-600 dark:text-indigo-400 bg-indigo-50/30 dark:bg-indigo-950/10 print:bg-white">${item.timestamp}</td>
+                    <tr class="border-b border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-700/40 transition">
+                        <td class="p-3 font-mono text-xs text-zinc-500 dark:text-zinc-400">${item.barcode || '---'}</td>
+                        <td class="p-3 font-medium text-zinc-800 dark:text-zinc-200">${item.name}</td>
+                        <td class="p-3 text-center font-bold text-zinc-700 dark:text-zinc-300 bg-zinc-50 dark:bg-zinc-900/40 print:bg-white">${item.quantity}</td>
+                        <td class="p-3 font-medium text-zinc-600 dark:text-zinc-300">${formattedExp}</td>
+                        <td class="p-3 text-center font-bold text-sevGreen-700 dark:text-emerald-400 bg-emerald-50/50 dark:bg-zinc-900 print:bg-white">${item.pullType}</td>
+                        <td class="p-3 text-center font-bold text-sevOrange-600 dark:text-sevOrange-500 bg-orange-50/60 dark:bg-orange-950/20 print:bg-white">${item.pullDate}</td>
+                        <td class="p-3 text-center font-mono text-xs text-zinc-600 dark:text-zinc-400 bg-zinc-50/50 dark:bg-zinc-900 print:bg-white">${item.timestamp}</td>
                         <td class="p-3 text-center font-semibold text-teal-800 dark:text-teal-400 bg-teal-50/20 dark:bg-teal-950/20 print:bg-white">${item.returnPolicy || '-'}</td>
-                        <td class="p-3 text-center font-medium text-slate-700 dark:text-slate-300">${item.employeeName}</td>
+                        <td class="p-3 text-center font-medium text-zinc-700 dark:text-zinc-300">${item.employeeName}</td>
                         <td class="p-3 text-center no-print"><button onclick="deleteItem(${index})" class="text-rose-500 hover:text-rose-700 font-bold">✕</button></td>
                     </tr>`;
             });
@@ -483,10 +493,10 @@
             const headerRow = worksheet.getRow(1);
             headerRow.height = 30;
             headerRow.eachCell((cell) => {
-                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E293B' } };
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF00843D' } }; // Đổi header Excel sang xanh 7-Eleven
                 cell.font = { name: 'Segoe UI', color: { argb: 'FFFFFFFF' }, bold: true, size: 11 };
                 cell.alignment = { vertical: 'middle', horizontal: 'center' };
-                cell.border = { bottom: { style: 'medium', color: { argb: 'FFF59E0B' } } };
+                cell.border = { bottom: { style: 'medium', color: { argb: 'FFEE2E24' } } }; // Đường gạch cam dưới tiêu đề
             });
 
             worksheet.eachRow((row, rowNumber) => {
@@ -511,13 +521,13 @@
                 row.getCell('returnPolicy').alignment = { vertical: 'middle', horizontal: 'center' };
                 row.getCell('employeeName').alignment = { vertical: 'middle', horizontal: 'center' };
 
-                row.getCell('quantity').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8FAFC' } };
+                row.getCell('quantity').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF4F4F5' } };
                 
-                row.getCell('pullType').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE0F2FE' } };
-                row.getCell('pullType').font = { name: 'Segoe UI', bold: true, color: { argb: 'FF0369A1' } };
+                row.getCell('pullType').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDCFCE7' } };
+                row.getCell('pullType').font = { name: 'Segoe UI', bold: true, color: { argb: 'FF00843D' } };
 
-                row.getCell('pullDate').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF3C7' } };
-                row.getCell('pullDate').font = { name: 'Segoe UI', bold: true, color: { argb: 'FFB45309' } };
+                row.getCell('pullDate').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFE4E1' } }; // Màu nền cam nhẹ cho ngày rút
+                row.getCell('pullDate').font = { name: 'Segoe UI', bold: true, color: { argb: 'FFD62219' } };
 
                 row.getCell('returnPolicy').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCCFBF1' } };
                 row.getCell('returnPolicy').font = { name: 'Segoe UI', bold: true, color: { argb: 'FF0F766E' } };
@@ -527,7 +537,7 @@
             const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
             const link = document.createElement("a");
             link.href = URL.createObjectURL(blob);
-            link.download = `Bao_Cao_Date_Sieu_Dep_${new Date().toISOString().slice(0,10)}.xlsx`;
+            link.download = `Bao_Cao_Date_7Eleven_${new Date().toISOString().slice(0,10)}.xlsx`;
             link.click();
             URL.revokeObjectURL(link.href);
         }
