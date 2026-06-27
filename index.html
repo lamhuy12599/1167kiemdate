@@ -191,7 +191,7 @@
 
     <script>
         // ⚠️ THAY ĐƯỜNG LINK APPS SCRIPT CỦA BẠN VÀO GIỮA HAI DẤU NHÁY DƯỚI ĐÂY
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx-2kUeSfau11Xij0dd8zB22Qw8deaRhpId2Z2ipIuXmyPQYtGTuwdOwL82B0ZGFOPstQ/exec";
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx17rOPNEsIUQ9PPri-AWcNiT9avYqpyRjcDfowI2juVbRN4zE8T1wQci9erwomNUFY7g/exec";
 
         let dateInventory = JSON.parse(localStorage.getItem('date_inventory_return')) || [];
         let masterData = []; 
@@ -477,7 +477,6 @@
             }
         }
 
-        // CẬP NHẬT: HÀM ĐỒNG BỘ MỚI KHẮC PHỤC LỖI KẾT NỐI MẠNG / SERVER
         async function submitDataToSheet() {
             if (dateInventory.length === 0) {
                 alert("Không có dữ liệu nào trong bảng tạm để gửi!");
@@ -492,7 +491,6 @@
             btn.classList.add('opacity-50', 'cursor-not-allowed');
 
             try {
-                // Sửa đổi phương thức gửi thành text/plain và bắt redirect để né lỗi CORS của Google Apps Script
                 const response = await fetch(SCRIPT_URL, {
                     method: 'POST',
                     mode: 'cors',
