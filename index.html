@@ -59,7 +59,7 @@
             }
             thead tr th {
                 color: white !important;
-                background-color: #00843D !important; /* Đổi sang màu xanh lá 7-Eleven khi in */
+                background-color: #00843D !important;
             }
         }
     </style>
@@ -139,7 +139,7 @@
                         </select>
                     </div>
 
-                    <button onclick="addItem()" class="w-full bg-sevOrange-500 text-white font-bold py-2.5 rounded-xl text-sm hover:bg-sevOrange-600 transition shadow-sm mt-2 tracking-wide">Ghi Nhận Kiểm Date</button>
+                    <button onclick="addItem()" class="w-full bg-sevOrange-500 text-white font-bold py-2.5 rounded-xl text-sm hover:bg-sevOrange-600 transition shadow-sm mt-2 tracking-wide">Ghi Nhận Kiểm Date (Tạm Tính)</button>
                 </div>
             </div>
 
@@ -147,12 +147,18 @@
                 <div class="flex flex-wrap justify-between items-center mb-4 gap-2">
                     <h2 class="text-lg font-semibold text-zinc-800 dark:text-white print:text-xl print:font-bold">Danh Sách Báo Cáo Date Trong Ca</h2>
                     
-                    <div class="no-print flex gap-2">
-                        <button onclick="window.print()" class="bg-sevGreen-600 text-white font-medium px-4 py-2 rounded-xl text-sm hover:bg-sevGreen-700 transition shadow-sm flex items-center gap-1">
-                            🖨️ In Trực Tiếp
+                    <div class="no-print flex flex-wrap gap-2">
+                        <button onclick="window.print()" class="bg-zinc-600 text-white font-medium px-3 py-2 rounded-xl text-sm hover:bg-zinc-700 transition shadow-sm flex items-center gap-1">
+                            🖨️ In
                         </button>
-                        <button onclick="exportToExcel()" class="bg-emerald-600 text-white font-medium px-4 py-2 rounded-xl text-sm hover:bg-emerald-700 transition shadow-sm">
-                            📦 Xuất Excel (.xlsx)
+                        <button onclick="exportToExcel()" class="bg-emerald-600 text-white font-medium px-3 py-2 rounded-xl text-sm hover:bg-emerald-700 transition shadow-sm">
+                            📦 Excel
+                        </button>
+                        <button onclick="clearAllData()" class="bg-rose-500 text-white font-medium px-3 py-2 rounded-xl text-sm hover:bg-rose-600 transition shadow-sm">
+                            🗑️ Xóa Tất Cả
+                        </button>
+                        <button onclick="submitDataToSheet()" id="btnSubmitSheet" class="bg-sevGreen-600 text-white font-bold px-4 py-2 rounded-xl text-sm hover:bg-sevGreen-700 transition shadow-md flex items-center gap-1">
+                            🚀 Gửi & Chốt Ca
                         </button>
                     </div>
                 </div>
@@ -184,7 +190,7 @@
     </div>
 
     <script>
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwW_I_-IC1AX6aejMpahYeYjzTwv6jkdNHpnH6C0gXth5PzS7eqsAmU-HVFOizEkW0rEg/exec";
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx-2kUeSfau11Xij0dd8zB22Qw8deaRhpId2Z2ipIuXmyPQYtGTuwdOwL82B0ZGFOPstQ/exec";
 
         let dateInventory = JSON.parse(localStorage.getItem('date_inventory_return')) || [];
         let masterData = []; 
@@ -251,6 +257,12 @@
                     gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
                     osc.connect(gain); gain.connect(ctx.destination);
                     osc.start(); osc.stop(ctx.currentTime + 0.15);
+                } else if (type === 'error') {
+                    osc.frequency.setValueAtTime(400, ctx.currentTime);
+                    gain.gain.setValueAtTime(0.2, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+                    osc.connect(gain); gain.connect(ctx.destination);
+                    osc.start(); osc.stop(ctx.currentTime + 0.3);
                 }
             } catch (e) {}
         }
@@ -435,12 +447,7 @@
             renderTable();
             playBeep('success');
 
-            fetch(SCRIPT_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(itemData)
-            }).catch(err => console.error(err));
+            // ĐÃ BỎ FETCH POST TỪNG DÒNG TẠI ĐÂY ĐỂ LƯU TẠM THỜI
 
             document.getElementById('barcode').value = "";
             document.getElementById('productName').value = "";
@@ -455,6 +462,63 @@
             dateInventory.splice(index, 1);
             localStorage.setItem('date_inventory_return', JSON.stringify(dateInventory));
             renderTable();
+        }
+
+        // CHỨC NĂNG 1: XÓA SẠCH BẢNG ĐỂ LÀM CA MỚI
+        function clearAllData() {
+            if (dateInventory.length === 0) {
+                alert("Bảng dữ liệu đã trống sẵn rồi!");
+                return;
+            }
+            if (confirm("⚠️ BẠN CÓ CHẮC CHẮN MUỐN XÓA TẤT CẢ DỮ LIỆU ĐÃ QUÉT?\nHành động này không thể hoàn tác nếu chưa gửi lên Sheet hoặc xuất Excel!")) {
+                dateInventory = [];
+                localStorage.removeItem('date_inventory_return');
+                renderTable();
+                playBeep('error');
+                alert("🧹 Đã xóa sạch dữ liệu tạm thời!");
+            }
+        }
+
+        // CHỨC NĂNG 2: ĐỒNG BỘ TOÀN BỘ MẢNG SANG GOOGLE SHEET MỘT LẦN DUY NHẤT
+        async function submitDataToSheet() {
+            if (dateInventory.length === 0) {
+                alert("Không có dữ liệu nào trong bảng tạm để gửi!");
+                return;
+            }
+
+            const btn = document.getElementById('btnSubmitSheet');
+            if (!confirm(`Bạn muốn đồng bộ toàn bộ ${dateInventory.length} dòng dữ liệu này lên hệ thống và chốt ca chứ?`)) return;
+
+            btn.disabled = true;
+            btn.innerHTML = "⏳ Đang gửi dữ liệu...";
+            btn.classList.add('opacity-50', 'cursor-not-allowed');
+
+            try {
+                // Gửi toàn bộ mảng dateInventory dưới dạng JSON
+                const response = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: "sync_batch", data: dateInventory })
+                });
+
+                // Do Apps Script ở chế độ no-cors không đọc được response rõ ràng, 
+                // nhưng nếu fetch không ném lỗi catch thì tức là request đã đi thành công.
+                alert("🚀 Đồng bộ dữ liệu lên Google Sheets THÀNH CÔNG!");
+                
+                // Tự động xóa dữ liệu tạm sau khi đồng bộ để chuẩn bị cho ca mới
+                dateInventory = [];
+                localStorage.removeItem('date_inventory_return');
+                renderTable();
+                playBeep('success');
+
+            } catch (err) {
+                console.error(err);
+                alert("❌ Lỗi kết nối mạng hoặc lỗi Server! Dữ liệu VẪN ĐƯỢC LƯU AN TOÀN tại máy, bạn hãy thử bấm gửi lại.");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = "🚀 Gửi & Chốt Ca";
+                btn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
         }
 
         async function exportToExcel() {
@@ -493,10 +557,10 @@
             const headerRow = worksheet.getRow(1);
             headerRow.height = 30;
             headerRow.eachCell((cell) => {
-                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF00843D' } }; // Đổi header Excel sang xanh 7-Eleven
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF00843D' } }; 
                 cell.font = { name: 'Segoe UI', color: { argb: 'FFFFFFFF' }, bold: true, size: 11 };
                 cell.alignment = { vertical: 'middle', horizontal: 'center' };
-                cell.border = { bottom: { style: 'medium', color: { argb: 'FFEE2E24' } } }; // Đường gạch cam dưới tiêu đề
+                cell.border = { bottom: { style: 'medium', color: { argb: 'FFEE2E24' } } }; 
             });
 
             worksheet.eachRow((row, rowNumber) => {
@@ -526,7 +590,7 @@
                 row.getCell('pullType').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDCFCE7' } };
                 row.getCell('pullType').font = { name: 'Segoe UI', bold: true, color: { argb: 'FF00843D' } };
 
-                row.getCell('pullDate').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFE4E1' } }; // Màu nền cam nhẹ cho ngày rút
+                row.getCell('pullDate').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFE4E1' } }; 
                 row.getCell('pullDate').font = { name: 'Segoe UI', bold: true, color: { argb: 'FFD62219' } };
 
                 row.getCell('returnPolicy').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCCFBF1' } };
