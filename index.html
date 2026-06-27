@@ -190,6 +190,7 @@
     </div>
 
     <script>
+        // ⚠️ THAY ĐƯỜNG LINK APPS SCRIPT CỦA BẠN VÀO GIỮA HAI DẤU NHÁY DƯỚI ĐÂY
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx-2kUeSfau11Xij0dd8zB22Qw8deaRhpId2Z2ipIuXmyPQYtGTuwdOwL82B0ZGFOPstQ/exec";
 
         let dateInventory = JSON.parse(localStorage.getItem('date_inventory_return')) || [];
@@ -447,8 +448,6 @@
             renderTable();
             playBeep('success');
 
-            // ĐÃ BỎ FETCH POST TỪNG DÒNG TẠI ĐÂY ĐỂ LƯU TẠM THỜI
-
             document.getElementById('barcode').value = "";
             document.getElementById('productName').value = "";
             document.getElementById('quantity').value = "1";
@@ -464,7 +463,6 @@
             renderTable();
         }
 
-        // CHỨC NĂNG 1: XÓA SẠCH BẢNG ĐỂ LÀM CA MỚI
         function clearAllData() {
             if (dateInventory.length === 0) {
                 alert("Bảng dữ liệu đã trống sẵn rồi!");
@@ -479,7 +477,7 @@
             }
         }
 
-        // CHỨC NĂNG 2: ĐỒNG BỘ TOÀN BỘ MẢNG SANG GOOGLE SHEET MỘT LẦN DUY NHẤT
+        // CẬP NHẬT: HÀM ĐỒNG BỘ MỚI KHẮC PHỤC LỖI KẾT NỐI MẠNG / SERVER
         async function submitDataToSheet() {
             if (dateInventory.length === 0) {
                 alert("Không có dữ liệu nào trong bảng tạm để gửi!");
@@ -494,26 +492,31 @@
             btn.classList.add('opacity-50', 'cursor-not-allowed');
 
             try {
-                // Gửi toàn bộ mảng dateInventory dưới dạng JSON
+                // Sửa đổi phương thức gửi thành text/plain và bắt redirect để né lỗi CORS của Google Apps Script
                 const response = await fetch(SCRIPT_URL, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    mode: 'cors',
+                    redirect: 'follow',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' }, 
                     body: JSON.stringify({ action: "sync_batch", data: dateInventory })
                 });
 
-                // Do Apps Script ở chế độ no-cors không đọc được response rõ ràng, 
-                // nhưng nếu fetch không ném lỗi catch thì tức là request đã đi thành công.
-                alert("🚀 Đồng bộ dữ liệu lên Google Sheets THÀNH CÔNG!");
-                
-                // Tự động xóa dữ liệu tạm sau khi đồng bộ để chuẩn bị cho ca mới
-                dateInventory = [];
-                localStorage.removeItem('date_inventory_return');
-                renderTable();
-                playBeep('success');
+                const resText = await response.text();
+                const resJson = JSON.parse(resText);
+
+                if (resJson.status === "success") {
+                    alert(`🚀 Đồng bộ thành công! ${resJson.message}`);
+                    dateInventory = [];
+                    localStorage.removeItem('date_inventory_return');
+                    renderTable();
+                    playBeep('success');
+                } else {
+                    alert("❌ Lỗi từ hệ thống Sheet: " + resJson.message);
+                }
 
             } catch (err) {
                 console.error(err);
-                alert("❌ Lỗi kết nối mạng hoặc lỗi Server! Dữ liệu VẪN ĐƯỢC LƯU AN TOÀN tại máy, bạn hãy thử bấm gửi lại.");
+                alert("❌ Lỗi kết nối! Bạn hãy kiểm tra lại cấu hình Deploy trên Apps Script đã ở chế độ 'Anyone' chưa, hoặc kiểm tra lại đường dẫn SCRIPT_URL.");
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = "🚀 Gửi & Chốt Ca";
