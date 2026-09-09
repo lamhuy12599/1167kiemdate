@@ -31,6 +31,7 @@
     </script>
     <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
     <style>
         @media print {
@@ -77,6 +78,9 @@
             </div>
             <button onclick="toggleTheme()" id="themeToggleBtn" class="bg-zinc-800 hover:bg-zinc-700 text-emerald-400 dark:text-emerald-300 border border-zinc-700 px-4 py-2 rounded-xl text-sm font-semibold transition flex items-center gap-2 shadow-sm shrink-0 self-end sm:self-auto">
                 🌙 Chế độ tối
+            </button>
+            <button onclick="openSettings()" id="settingsBtn" title="Cài đặt" class="no-print bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 w-10 h-10 rounded-xl text-base transition flex items-center justify-center shadow-sm shrink-0 self-end sm:self-auto">
+                ⚙️
             </button>
         </div>
 
@@ -185,6 +189,26 @@
                     </table>
                 </div>
                 <div id="emptyAlert" class="text-center py-8 text-zinc-400 dark:text-zinc-500 text-sm">Chưa có dữ liệu kiểm date nào được nhập.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Cài đặt: chứa nút cập nhật database, ẩn khỏi màn hình vận hành chính -->
+    <div id="settingsOverlay" class="no-print hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-zinc-800 rounded-2xl shadow-xl border border-zinc-200 dark:border-zinc-700 w-full max-w-md p-6">
+            <div class="flex items-center justify-between mb-4 border-b dark:border-zinc-700 pb-3">
+                <h3 class="text-base font-bold text-zinc-800 dark:text-white">⚙️ Cài đặt</h3>
+                <button onclick="closeSettings()" class="w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-700 text-zinc-500 dark:text-zinc-300 flex items-center justify-center hover:bg-zinc-200 dark:hover:bg-zinc-600 transition">✕</button>
+            </div>
+
+            <div class="p-4 rounded-xl border border-dashed border-zinc-300 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-900/40">
+                <h4 class="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide mb-2">Cập nhật Database</h4>
+                <p class="text-xs text-zinc-500 dark:text-zinc-400 mb-3 leading-relaxed">Tải lên file Excel dữ liệu gốc (Group, Category, Sub Category, Product ID, Short Name, Base Upc) để tự động cập nhật danh mục sản phẩm dùng để tra cứu Barcode / Tên / Chính sách đổi trả.</p>
+                <input type="file" id="importFileInput" accept=".xlsx,.xls" class="hidden">
+                <button id="btnImport" onclick="document.getElementById('importFileInput').click()" class="w-full bg-gradient-to-r from-indigo-500 to-violet-500 text-white font-semibold py-2.5 rounded-xl text-sm hover:opacity-90 transition shadow-sm disabled:opacity-50 disabled:pointer-events-none">
+                    📤 TẢI FILE EXCEL LÊN
+                </button>
+                <div id="importProgress" class="hidden mt-3 text-xs font-semibold text-center py-2 rounded-lg"></div>
             </div>
         </div>
     </div>
@@ -609,6 +633,119 @@
 
         renderTable();
         fetchMasterData();
+
+        // ---------- MODAL CÀI ĐẶT ----------
+        function openSettings() {
+            document.getElementById('settingsOverlay').classList.remove('hidden');
+        }
+        function closeSettings() {
+            document.getElementById('settingsOverlay').classList.add('hidden');
+        }
+        document.getElementById('settingsOverlay').addEventListener('click', function(e) {
+            if (e.target === this) closeSettings();
+        });
+
+        // ---------- CẬP NHẬT DATABASE TỪ FILE EXCEL ----------
+        function normalizeKey_(k) {
+            return String(k || "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+        }
+
+        function pickField_(row, normMap, candidates) {
+            for (const c of candidates) {
+                const key = normMap[c];
+                if (key !== undefined && row[key] !== undefined && row[key] !== null && String(row[key]).trim() !== "") {
+                    return String(row[key]).trim();
+                }
+            }
+            return "";
+        }
+
+        function showImportProgress(msg, type) {
+            const el = document.getElementById('importProgress');
+            el.textContent = msg;
+            el.className = 'mt-3 text-xs font-semibold text-center py-2 rounded-lg ' +
+                (type === 'success' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400'
+                : type === 'error' ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-400'
+                : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-400');
+        }
+
+        document.getElementById('importFileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const btn = document.getElementById('btnImport');
+            btn.disabled = true;
+            showImportProgress("⏳ Đang đọc file Excel...", "info");
+
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                try {
+                    const wb = XLSX.read(evt.target.result, { type: "array" });
+                    const ws = wb.Sheets[wb.SheetNames[0]];
+                    const rawRows = XLSX.utils.sheet_to_json(ws, { defval: "", raw: false });
+
+                    if (!rawRows.length) {
+                        showImportProgress("❌ File không có dữ liệu.", "error");
+                        btn.disabled = false;
+                        return;
+                    }
+
+                    const normMap = {};
+                    Object.keys(rawRows[0]).forEach(k => { normMap[normalizeKey_(k)] = k; });
+
+                    const mapped = rawRows.map(row => ({
+                        productId: pickField_(row, normMap, ["productid", "id"]),
+                        barcode: pickField_(row, normMap, ["baseupc", "upc", "barcode"]),
+                        name: pickField_(row, normMap, ["shortname", "name", "productname"]),
+                        group: pickField_(row, normMap, ["group"]),
+                        category: pickField_(row, normMap, ["category"]),
+                        subCategory: pickField_(row, normMap, ["subcategory"])
+                    })).filter(r => r.productId || r.barcode);
+
+                    if (!mapped.length) {
+                        showImportProgress("❌ Không tìm thấy các cột cần thiết trong file (Product ID, Base Upc...).", "error");
+                        btn.disabled = false;
+                        return;
+                    }
+
+                    showImportProgress(`⏳ Đang cập nhật ${mapped.length} sản phẩm lên database...`, "info");
+                    sendImport(mapped, btn);
+                } catch (err) {
+                    console.error(err);
+                    showImportProgress("❌ Lỗi đọc file Excel. Kiểm tra định dạng file.", "error");
+                    btn.disabled = false;
+                }
+            };
+            reader.onerror = function() {
+                showImportProgress("❌ Không thể đọc file.", "error");
+                btn.disabled = false;
+            };
+            reader.readAsArrayBuffer(file);
+            e.target.value = "";
+        });
+
+        function sendImport(rows, btn) {
+            fetch(SCRIPT_URL, {
+                method: "POST",
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify({ action: "import", rows: rows })
+            })
+            .then(res => res.json())
+            .then(res => {
+                btn.disabled = false;
+                if (res && res.success) {
+                    showImportProgress(`✅ Đã thêm mới ${res.added} · cập nhật ${res.updated} sản phẩm.`, "success");
+                    fetchMasterData();
+                } else {
+                    showImportProgress("❌ " + ((res && res.error) || "Cập nhật thất bại."), "error");
+                }
+            })
+            .catch(err => {
+                btn.disabled = false;
+                console.error(err);
+                showImportProgress("❌ Lỗi kết nối máy chủ khi cập nhật.", "error");
+            });
+        }
     </script>
 </body>
 </html>
