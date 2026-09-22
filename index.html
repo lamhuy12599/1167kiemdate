@@ -29,9 +29,12 @@
             }
         }
     </script>
-    <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
-    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- Ghim phiên bản cụ thể (2.3.8) thay vì tải "latest" từ unpkg: bản mới nhất không rõ
+         thay đổi gì có thể là nguyên nhân gây lỗi quét trên iOS. defer để các thư viện này
+         (chỉ dùng khi bấm nút) không chặn render trang lúc tải đầu tiên. -->
+    <script defer src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
     <style>
         :root{
@@ -46,7 +49,7 @@
         }
         .dark .bg-liquid{ background:linear-gradient(160deg,#0c1512 0%,#101216 45%,#1a120f 100%); }
 
-        .blob{ position:absolute; filter:blur(90px); opacity:.5; will-change:transform,border-radius; }
+        .blob{ position:absolute; filter:blur(90px); opacity:.5; will-change:transform,border-radius; transform:translateZ(0); }
         .dark .blob{ opacity:.32; filter:blur(100px); }
         .blob.b1{ width:560px; height:560px; top:-190px; left:-160px;
             background:radial-gradient(circle at 30% 30%, var(--lg-green), transparent 70%);
@@ -57,6 +60,15 @@
         .blob.b3{ width:420px; height:420px; bottom:4%; left:4%;
             background:radial-gradient(circle at 50% 50%, var(--lg-orange), transparent 70%);
             animation:lgFloat3 20s ease-in-out infinite; }
+        /* Trên màn hình nhỏ (điện thoại), 3 blob mờ + animation liên tục chạy dưới các lớp
+           glass (backdrop-filter) là nguyên nhân chính gây lag/giật trên iOS Safari, vì
+           backdrop-filter phải tính lại mỗi khung hình khi nội dung phía sau đang animate.
+           Giảm bớt số blob + tắt animation trên di động để nhẹ máy, giao diện gần như
+           không đổi khi đứng yên. */
+        @media (max-width: 768px){
+            .blob{ filter:blur(60px); animation:none !important; }
+            .blob.b3{ display:none; }
+        }
         @keyframes lgFloat1{
             0%{ transform:translate(0,0) scale(1); border-radius:58% 42% 61% 39% / 41% 57% 43% 59%; }
             50%{ transform:translate(55px,45px) scale(1.07); border-radius:41% 59% 47% 53% / 61% 39% 61% 39%; }
@@ -102,6 +114,15 @@
             -webkit-backdrop-filter:blur(8px);
         }
         .dark .glass-input{ background:rgba(255,255,255,0.07) !important; }
+
+        /* backdrop-filter (blur+saturate) trên toàn bộ khung + header + từng input là chi phí
+           lớn nhất khi render lại (gõ liệu, cuộn, mở modal) trên điện thoại đời cũ/iOS Safari.
+           Giảm bán kính blur trên màn hình nhỏ giúp mượt hơn rõ rệt mà giao diện gần như
+           không đổi mắt thường. */
+        @media (max-width: 768px){
+            .glass, .glass-header{ backdrop-filter:blur(10px) saturate(140%); -webkit-backdrop-filter:blur(10px) saturate(140%); }
+            .glass-input{ backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); }
+        }
 
         /* Reusable "liquid" button treatment: translucency + a light sweep on
            hover, layered on top of Tailwind's own bg-color/opacity classes so
@@ -488,12 +509,37 @@
             }
         }
 
+        // ---------- SO KHỚP BARCODE (chịu lỗi định dạng từ camera) ----------
+        // Nguyên nhân chính của lỗi "quét mã đã có sẵn nhưng báo là mã mới hoàn toàn":
+        // khi camera quét mã UPC-A (12 số, phổ biến trên hàng hoá), thư viện quét mã sẽ
+        // TỰ ĐỘNG trả về dưới dạng EAN-13 (13 số) bằng cách thêm số 0 ở đầu (đây là hành vi
+        // chuẩn của engine quét mã vạch, không phải lỗi của web). Nếu database lưu mã gốc
+        // 12 số mà so sánh "===" trực tiếp với mã 13 số vừa quét, sẽ luôn KHÔNG khớp dù là
+        // cùng một sản phẩm => hiển thị nhầm là "mã mới hoàn toàn". Hàm dưới đây chuẩn hoá
+        // và so khớp cả hai trường hợp lệch nhau đúng 1 số 0 ở đầu.
+        function normalizeBarcode_(code) {
+            return String(code || "").trim().replace(/[^0-9]/g, "");
+        }
+        function barcodeEquals_(a, b) {
+            let na = normalizeBarcode_(a), nb = normalizeBarcode_(b);
+            if (!na || !nb) return false;
+            if (na === nb) return true;
+            // Lệch đúng 1 ký tự và phần còn lại giống hệt nhau sau khi bỏ số 0 đầu
+            // => rất có thể là cùng 1 mã bị lệch UPC-A (12 số) / EAN-13 (13 số).
+            if (Math.abs(na.length - nb.length) === 1) {
+                let longer = na.length > nb.length ? na : nb;
+                let shorter = na.length > nb.length ? nb : na;
+                if (longer.charAt(0) === '0' && longer.slice(1) === shorter) return true;
+            }
+            return false;
+        }
+
         document.getElementById('barcode').addEventListener('input', function(e) {
             let code = e.target.value.trim();
             let alertBox = document.getElementById('memoryAlert');
             if (code.length === 0) { alertBox.textContent = ""; return; }
 
-            let matchedMaster = masterData.find(item => item.barcode === code);
+            let matchedMaster = masterData.find(item => barcodeEquals_(item.barcode, code));
             if (matchedMaster) {
                 document.getElementById('productName').value = matchedMaster.name;
                 currentReturnPolicy = matchedMaster.returnPolicy || "-";
@@ -504,7 +550,7 @@
                 return;
             }
 
-            let found = [...dateInventory].reverse().find(item => item.barcode === code && item.barcode !== "");
+            let found = [...dateInventory].reverse().find(item => item.barcode !== "" && barcodeEquals_(item.barcode, code));
             if (found) {
                 document.getElementById('productName').value = found.name;
                 currentReturnPolicy = found.returnPolicy || "-";
@@ -536,19 +582,62 @@
 
         function toggleCamera() {
             const container = document.getElementById('camera-container');
-            if (container.classList.contains('hidden')) { container.classList.remove('hidden'); startCamera(); }
-            else { stopCamera(); }
+            if (container.classList.contains('hidden')) {
+                container.classList.remove('hidden');
+                // Trên iOS Safari, nếu gọi Html5Qrcode.start() ngay lúc vừa bỏ class "hidden",
+                // trình duyệt đôi khi CHƯA kịp tính lại layout của #reader (vẫn đang có
+                // kích thước 0x0 tại thời điểm đó), khiến camera không mở được / không quét
+                // được dù đã cấp quyền. Đợi 2 khung hình (double requestAnimationFrame) để
+                // đảm bảo layout đã ổn định trước khi khởi động camera.
+                requestAnimationFrame(() => requestAnimationFrame(startCamera));
+            } else {
+                stopCamera();
+            }
         }
 
         function startCamera() {
-            const config = { fps: 15, qrbox: { width: 260, height: 140 }, formatsToSupport: [ Html5QrcodeSupportedFormats.EAN_13, Html5QrcodeSupportedFormats.EAN_8, Html5QrcodeSupportedFormats.QR_CODE ] };
+            if (typeof Html5Qrcode === 'undefined') {
+                alert("Thư viện Camera chưa tải xong, vui lòng đợi 1-2 giây rồi bấm lại.");
+                return;
+            }
+            const config = {
+                fps: 15,
+                qrbox: { width: 260, height: 140 },
+                // Thêm UPC_A / UPC_E / CODE_128: nhiều mã hàng thực tế là UPC-A (12 số),
+                // trước đây chỉ khai báo EAN_13/EAN_8 nên engine quét có thể bỏ qua hoặc
+                // ép mã UPC-A thành EAN-13 (thêm số 0 ở đầu) rồi báo không khớp dữ liệu.
+                formatsToSupport: [
+                    Html5QrcodeSupportedFormats.EAN_13,
+                    Html5QrcodeSupportedFormats.EAN_8,
+                    Html5QrcodeSupportedFormats.UPC_A,
+                    Html5QrcodeSupportedFormats.UPC_E,
+                    Html5QrcodeSupportedFormats.CODE_128,
+                    Html5QrcodeSupportedFormats.QR_CODE
+                ]
+            };
             html5QrcodeScanner = new Html5Qrcode("reader");
             html5QrcodeScanner.start({ facingMode: "environment" }, config, (decodedText) => {
                 let barcodeInput = document.getElementById('barcode');
-                barcodeInput.value = decodedText;
+                barcodeInput.value = decodedText.trim();
                 barcodeInput.dispatchEvent(new Event('input'));
                 stopCamera();
-            }, (err) => {}).catch(err => { alert("Yêu cầu bảo mật HTTPS để dùng Camera."); stopCamera(); });
+            }, (err) => { /* lỗi từng khung hình không tìm thấy mã: bỏ qua, đây là bình thường */ })
+            .catch(err => {
+                console.error(err);
+                const errStr = String(err);
+                let msg = "Không thể mở Camera.";
+                if (location.protocol !== 'https:' && !['localhost','127.0.0.1'].includes(location.hostname)) {
+                    msg = "Cần truy cập trang qua HTTPS thì mới dùng được Camera.";
+                } else if (/NotAllowedError|Permission/i.test(errStr)) {
+                    msg = "Bạn đã từ chối quyền Camera. Vào Cài đặt > Safari (hoặc trình duyệt) > Camera để cấp quyền cho trang này rồi thử lại.";
+                } else if (/NotFoundError/i.test(errStr)) {
+                    msg = "Không tìm thấy Camera trên thiết bị này.";
+                } else if (/NotReadableError/i.test(errStr)) {
+                    msg = "Camera đang được ứng dụng khác sử dụng, hãy đóng ứng dụng đó rồi thử lại.";
+                }
+                alert(msg);
+                stopCamera();
+            });
         }
 
         function stopCamera() {
