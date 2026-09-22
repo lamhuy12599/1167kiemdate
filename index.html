@@ -493,10 +493,38 @@
         // giá trị JS "undefined" và hiển thị NGUYÊN CHỮ "undefined" trên màn hình — đúng lỗi
         // đang gặp. Hàm này thử nhiều tên field phổ biến và luôn trả về chuỗi ("" nếu không
         // có), không bao giờ trả về undefined.
+        // Chuẩn hoá tên field: bỏ dấu tiếng Việt, bỏ khoảng trắng, hạ chữ thường.
+        // Dùng CHUNG logic này cho cả dữ liệu lấy từ GET (fetchMasterData) lẫn
+        // dữ liệu import Excel, để không bị lệch key kiểu "Base Upc" (có khoảng
+        // trắng, đúng tên cột gốc) không khớp với "baseUpc" (viết liền, không dấu).
+        // ĐÂY LÀ NGUYÊN NHÂN CHÍNH gây lỗi "quét xong không ra tên/mã mới hoàn toàn":
+        // trước đây normalizeMasterItem_ dùng danh sách tên field cứng không có
+        // khoảng trắng, nên nếu Apps Script trả JSON giữ nguyên tên cột gốc
+        // ("Base Upc", "Short Name", "Product ID"...) thì không bao giờ khớp,
+        // khiến barcode/name của TOÀN BỘ masterData luôn rỗng.
+        function normalizeKeyLoose_(k) {
+            return String(k || "")
+                .trim()
+                .toLowerCase()
+                .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+                .replace(/đ/g, "d")
+                .replace(/[^a-z0-9]/g, "");
+        }
         function pickAny_(obj, keys) {
+            // Vẫn thử khớp chính xác trước (nhanh, giữ tương thích ngược)...
             for (const k of keys) {
                 if (obj[k] !== undefined && obj[k] !== null && String(obj[k]).trim() !== "") {
                     return String(obj[k]).trim();
+                }
+            }
+            // ...rồi mới khớp "lỏng" theo tên đã chuẩn hoá (bỏ dấu/khoảng trắng/hoa-thường),
+            // để chịu được key kiểu "Base Upc", "Short Name", "Mã Vạch", v.v.
+            const normMap = {};
+            Object.keys(obj).forEach(k => { normMap[normalizeKeyLoose_(k)] = k; });
+            for (const k of keys) {
+                const realKey = normMap[normalizeKeyLoose_(k)];
+                if (realKey !== undefined && obj[realKey] !== undefined && obj[realKey] !== null && String(obj[realKey]).trim() !== "") {
+                    return String(obj[realKey]).trim();
                 }
             }
             return "";
@@ -504,13 +532,13 @@
         function normalizeMasterItem_(raw) {
             raw = raw || {};
             return {
-                productId: pickAny_(raw, ['productId','ProductId','productID','id','ID']),
-                barcode: pickAny_(raw, ['barcode','Barcode','baseUpc','BaseUpc','baseUPC','upc','UPC']),
-                name: pickAny_(raw, ['name','Name','productName','ProductName','shortName','ShortName']),
+                productId: pickAny_(raw, ['productId','ProductId','productID','id','ID','Product ID','Ma San Pham']),
+                barcode: pickAny_(raw, ['barcode','Barcode','baseUpc','BaseUpc','baseUPC','upc','UPC','Base Upc','Ma Vach']),
+                name: pickAny_(raw, ['name','Name','productName','ProductName','shortName','ShortName','Short Name','Ten San Pham']),
                 group: pickAny_(raw, ['group','Group']),
                 category: pickAny_(raw, ['category','Category']),
-                subCategory: pickAny_(raw, ['subCategory','SubCategory','subcategory']),
-                returnPolicy: pickAny_(raw, ['returnPolicy','ReturnPolicy','return_policy'])
+                subCategory: pickAny_(raw, ['subCategory','SubCategory','subcategory','Sub Category']),
+                returnPolicy: pickAny_(raw, ['returnPolicy','ReturnPolicy','return_policy','Return Policy','Dieu Kien Doi Tra','Chinh Sach Doi Tra'])
             };
         }
 
@@ -520,6 +548,9 @@
                 const response = await fetch(SCRIPT_URL);
                 if (response.ok) {
                     const rawData = await response.json();
+                    // Luôn log mẫu dòng đầu tiên để tiện debug tên field thực tế backend trả về
+                    // (mở Console trong trình duyệt, F12, để xem).
+                    console.log('[Danh mục] Mẫu dòng đầu tiên từ server (dùng để kiểm tra tên field):', rawData && rawData[0]);
                     masterData = (Array.isArray(rawData) ? rawData : []).map(normalizeMasterItem_);
 
                     // Đếm số sản phẩm bị thiếu tên sau khi chuẩn hoá — nếu số này lớn, nhiều
