@@ -487,23 +487,66 @@
             } catch (e) {}
         }
 
+        // Chuẩn hoá 1 dòng dữ liệu danh mục lấy về từ Apps Script. Sở dĩ cần hàm này: nếu
+        // backend trả về field bị đặt tên khác (vd "Name"/"ProductName"/"shortName" thay vì
+        // "name", hoặc ô trống hoàn toàn không có key), gán thẳng item.name vào input sẽ ra
+        // giá trị JS "undefined" và hiển thị NGUYÊN CHỮ "undefined" trên màn hình — đúng lỗi
+        // đang gặp. Hàm này thử nhiều tên field phổ biến và luôn trả về chuỗi ("" nếu không
+        // có), không bao giờ trả về undefined.
+        function pickAny_(obj, keys) {
+            for (const k of keys) {
+                if (obj[k] !== undefined && obj[k] !== null && String(obj[k]).trim() !== "") {
+                    return String(obj[k]).trim();
+                }
+            }
+            return "";
+        }
+        function normalizeMasterItem_(raw) {
+            raw = raw || {};
+            return {
+                productId: pickAny_(raw, ['productId','ProductId','productID','id','ID']),
+                barcode: pickAny_(raw, ['barcode','Barcode','baseUpc','BaseUpc','baseUPC','upc','UPC']),
+                name: pickAny_(raw, ['name','Name','productName','ProductName','shortName','ShortName']),
+                group: pickAny_(raw, ['group','Group']),
+                category: pickAny_(raw, ['category','Category']),
+                subCategory: pickAny_(raw, ['subCategory','SubCategory','subcategory']),
+                returnPolicy: pickAny_(raw, ['returnPolicy','ReturnPolicy','return_policy'])
+            };
+        }
+
         async function fetchMasterData() {
             const statusEl = document.getElementById('syncStatus');
             try {
                 const response = await fetch(SCRIPT_URL);
                 if (response.ok) {
-                    masterData = await response.json();
+                    const rawData = await response.json();
+                    masterData = (Array.isArray(rawData) ? rawData : []).map(normalizeMasterItem_);
+
+                    // Đếm số sản phẩm bị thiếu tên sau khi chuẩn hoá — nếu số này lớn, nhiều
+                    // khả năng cột "Short Name" trong file Excel gốc bị đặt tên/định dạng khác
+                    // khiến lúc import không đọc được, cần kiểm tra lại file gốc rồi tải lại.
+                    const missingName = masterData.filter(it => it.barcode && !it.name).length;
+
                     const datalist = document.getElementById('productOptions');
                     datalist.innerHTML = "";
                     masterData.forEach(item => {
+                        if (!item.name) return; // không thêm option rỗng vào danh sách gợi ý
                         let option = document.createElement('option');
                         option.value = item.name;
                         datalist.appendChild(option);
                     });
-                    statusEl.textContent = `✅ Đã tải ${masterData.length} SP`;
-                    statusEl.className = "text-xs bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 px-2 py-0.5 rounded-full font-medium";
+
+                    if (missingName > 0) {
+                        statusEl.textContent = `⚠️ Đã tải ${masterData.length} SP (${missingName} thiếu tên!)`;
+                        statusEl.className = "text-xs bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400 px-2 py-0.5 rounded-full font-medium";
+                        console.warn(`[Danh mục] ${missingName} sản phẩm có barcode nhưng KHÔNG có tên sau chuẩn hoá. Kiểm tra lại tên cột trong file Excel gốc hoặc dữ liệu trả về từ Apps Script. Mẫu dòng đầu tiên từ server:`, rawData[0]);
+                    } else {
+                        statusEl.textContent = `✅ Đã tải ${masterData.length} SP`;
+                        statusEl.className = "text-xs bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 px-2 py-0.5 rounded-full font-medium";
+                    }
                 }
             } catch (err) {
+                console.error(err);
                 statusEl.textContent = "❌ Lỗi tải danh mục";
                 statusEl.className = "text-xs bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400 px-2 py-0.5 rounded-full font-medium";
             }
@@ -541,7 +584,9 @@
 
             let matchedMaster = masterData.find(item => barcodeEquals_(item.barcode, code));
             if (matchedMaster) {
-                document.getElementById('productName').value = matchedMaster.name;
+                // Luôn dùng "" thay vì để lọt giá trị undefined/null vào input (input.value =
+                // undefined sẽ hiển thị nguyên chữ "undefined" trên màn hình).
+                document.getElementById('productName').value = matchedMaster.name || "";
                 currentReturnPolicy = matchedMaster.returnPolicy || "-";
                 document.getElementById('returnPolicyView').textContent = currentReturnPolicy;
                 alertBox.textContent = "📦 Khớp dữ liệu danh mục hệ thống!";
@@ -552,7 +597,7 @@
 
             let found = [...dateInventory].reverse().find(item => item.barcode !== "" && barcodeEquals_(item.barcode, code));
             if (found) {
-                document.getElementById('productName').value = found.name;
+                document.getElementById('productName').value = found.name || "";
                 currentReturnPolicy = found.returnPolicy || "-";
                 document.getElementById('returnPolicyView').textContent = currentReturnPolicy;
                 alertBox.textContent = "⚡ Tự động lấy tên từ lịch sử ca trực!";
@@ -572,7 +617,7 @@
             if (matchedMaster) {
                 currentReturnPolicy = matchedMaster.returnPolicy || "-";
                 if (!document.getElementById('barcode').value.trim()) {
-                    document.getElementById('barcode').value = matchedMaster.barcode;
+                    document.getElementById('barcode').value = matchedMaster.barcode || "";
                 }
             } else {
                 currentReturnPolicy = "-";
@@ -584,12 +629,16 @@
             const container = document.getElementById('camera-container');
             if (container.classList.contains('hidden')) {
                 container.classList.remove('hidden');
-                // Trên iOS Safari, nếu gọi Html5Qrcode.start() ngay lúc vừa bỏ class "hidden",
-                // trình duyệt đôi khi CHƯA kịp tính lại layout của #reader (vẫn đang có
-                // kích thước 0x0 tại thời điểm đó), khiến camera không mở được / không quét
-                // được dù đã cấp quyền. Đợi 2 khung hình (double requestAnimationFrame) để
-                // đảm bảo layout đã ổn định trước khi khởi động camera.
-                requestAnimationFrame(() => requestAnimationFrame(startCamera));
+                // #reader cần có kích thước > 0 trước khi Html5Qrcode.start() đo layout, nếu
+                // không camera có thể không mở được. Đọc offsetHeight ngay sau khi bỏ "hidden"
+                // ép trình duyệt tính lại layout NGAY LẬP TỨC (đồng bộ, cùng tick JS) thay vì
+                // đợi qua requestAnimationFrame. Điều này quan trọng trên iOS Safari: nếu lệnh
+                // xin quyền Camera (getUserMedia) không được gọi đồng bộ trong chính thao tác
+                // bấm nút của người dùng, Safari có thể âm thầm không hiện hộp thoại xin quyền
+                // hoặc từ chối truy cập — đây nhiều khả năng là lý do camera "vẫn không quét
+                // được" dù đã sửa lần trước bằng requestAnimationFrame.
+                void container.offsetHeight; // ép reflow đồng bộ
+                startCamera();
             } else {
                 stopCamera();
             }
@@ -913,7 +962,12 @@
 
         // ---------- CẬP NHẬT DATABASE TỪ FILE EXCEL ----------
         function normalizeKey_(k) {
-            return String(k || "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+            return String(k || "")
+                .trim()
+                .toLowerCase()
+                .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // bỏ dấu tiếng Việt (vd "Tên" -> "ten")
+                .replace(/đ/g, "d")
+                .replace(/[^a-z0-9]/g, "");
         }
 
         function pickField_(row, normMap, candidates) {
@@ -960,12 +1014,12 @@
                     Object.keys(rawRows[0]).forEach(k => { normMap[normalizeKey_(k)] = k; });
 
                     const mapped = rawRows.map(row => ({
-                        productId: pickField_(row, normMap, ["productid", "id"]),
-                        barcode: pickField_(row, normMap, ["baseupc", "upc", "barcode"]),
-                        name: pickField_(row, normMap, ["shortname", "name", "productname"]),
-                        group: pickField_(row, normMap, ["group"]),
-                        category: pickField_(row, normMap, ["category"]),
-                        subCategory: pickField_(row, normMap, ["subcategory"])
+                        productId: pickField_(row, normMap, ["productid", "id", "masp", "masanpham"]),
+                        barcode: pickField_(row, normMap, ["baseupc", "upc", "barcode", "mavach", "mavachbarcode"]),
+                        name: pickField_(row, normMap, ["shortname", "name", "productname", "tensanpham", "tensp"]),
+                        group: pickField_(row, normMap, ["group", "nhom"]),
+                        category: pickField_(row, normMap, ["category", "loai", "nganhhang"]),
+                        subCategory: pickField_(row, normMap, ["subcategory", "loaicon", "phanloai"])
                     })).filter(r => r.productId || r.barcode);
 
                     if (!mapped.length) {
