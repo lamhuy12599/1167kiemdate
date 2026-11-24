@@ -105,8 +105,8 @@
         .box{ background:var(--soft); border:1px solid var(--border); border-radius:12px; padding:10px; }
         .hint{ font-size:12px; margin:4px 0 0; min-height:16px; font-weight:600; color:var(--muted); }
         .hint.ok{ color:#059669; } .hint.teal{ color:#0d9488; }
-        .policy-line{ display:flex; justify-content:space-between; align-items:center; gap:8px; margin-top:6px; padding:8px; border:1px dashed var(--border); border-radius:10px; font-size:12px; font-weight:600; color:var(--muted); }
-        .policy-val{ font-weight:700; color:#0f766e; background:var(--tint-teal); padding:2px 8px; border-radius:6px; border:1px solid var(--border); text-align:right; }
+        .policy-line{ display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-top:6px; padding:8px; border:1px dashed var(--border); border-radius:10px; font-size:12px; font-weight:600; color:var(--muted); }
+        .policy-val{ font-weight:700; color:#0f766e; background:var(--tint-teal); padding:2px 8px; border-radius:6px; border:1px solid var(--border); text-align:right; max-width:65%; word-break:break-word; }
         #camera-container{ border:2px dashed var(--border); border-radius:12px; padding:8px; margin-top:8px; }
         #reader{ width:100%; border-radius:10px; overflow:hidden; }
 
@@ -139,7 +139,7 @@
         td.qty{ font-weight:700; background:var(--tint-gray); }
         td.pt{ font-weight:700; color:var(--green-d); background:var(--tint-green); }
         td.pd{ font-weight:700; color:var(--red-d); background:var(--tint-red); }
-        td.pol{ font-weight:600; color:#0f766e; background:var(--tint-teal); }
+        td.pol{ font-weight:600; color:#0f766e; background:var(--tint-teal); min-width:170px; max-width:300px; font-size:12px; }
         tr.due td{ background:var(--due); }
         .del{ background:none; border:0; color:#f43f5e; font-weight:700; font-size:15px; }
         .empty{ text-align:center; padding:28px 0; color:var(--muted); }
@@ -391,7 +391,7 @@
 
         <div class="upload-box">
             <h4>Cập nhật Return Policy</h4>
-            <p>Tải lên file Excel chính sách đổi trả có 2 cột <b>Product Name</b> và <b>Requirement</b>. Backend sẽ tự đối chiếu tên sản phẩm để gán chính sách đổi trả.</p>
+            <p>Tải lên file Excel chính sách đổi trả. Trang tự tìm sheet <b>Return Policy</b>, đọc các cột <b>Product Name</b>, <b>Requirement</b> (và <b>Product ID</b> nếu có). Backend tự đối chiếu với danh mục sản phẩm để gán chính sách đổi trả.</p>
             <input type="file" id="policyFileInput" accept=".xlsx,.xls" class="hidden">
             <button id="btnPolicy" class="btn btn-violet btn-block" onclick="document.getElementById('policyFileInput').click()">🔄 TẢI FILE RETURN POLICY</button>
             <div id="policyProgress" class="progress hidden"></div>
@@ -1109,30 +1109,74 @@
         }
     });
 
-    // Upload Return Policy (cột Product Name + Requirement)
+    // Đọc file Return Policy: chọn sheet "Return Policy", tự dò hàng tiêu đề, lấy Product Name / Requirement / Product ID
+    function readPolicyRows_(file) {
+        return new Promise((resolve, reject) => {
+            const fr = new FileReader();
+            fr.onerror = () => reject(new Error('Không thể đọc file.'));
+            fr.onload = async () => {
+                try {
+                    await loadScript_(XLSX_URL, 'XLSX');
+                    const buf = fr.result;
+                    // Workbook có thể rất nặng (nhiều sheet): chỉ lấy tên sheet trước, rồi chỉ phân tích đúng sheet cần
+                    const sheetNames = XLSX.read(buf, { type: 'array', bookSheets: true }).SheetNames;
+                    const target = sheetNames.find(n => normalizeKeyLoose_(n) === 'returnpolicy') || sheetNames[0];
+                    let wb = XLSX.read(buf, { type: 'array', sheets: [target] });
+                    if (!wb.Sheets[target]) wb = XLSX.read(buf, { type: 'array' });
+                    const aoa = XLSX.utils.sheet_to_json(wb.Sheets[target], { header: 1, defval: "", raw: false });
+
+                    const NAME = ["productname", "tensanpham", "tensp", "shortname"];
+                    const REQ = ["requirement", "yeucau", "dieukien"];
+                    const ID = ["productid", "masp", "masanpham"];
+                    let hRow = -1, cName = -1, cReq = -1, cId = -1;
+                    for (let i = 0; i < Math.min(aoa.length, 30); i++) {
+                        const norm = aoa[i].map(normalizeKeyLoose_);
+                        const n = norm.findIndex(x => NAME.includes(x));
+                        const r = norm.findIndex(x => REQ.includes(x));
+                        if (n !== -1 && r !== -1) { hRow = i; cName = n; cReq = r; cId = norm.findIndex(x => ID.includes(x)); break; }
+                    }
+                    if (hRow === -1) {
+                        reject(new Error(`Không tìm thấy hàng tiêu đề có cột Product Name và Requirement trong sheet "${String(target).trim()}".`));
+                        return;
+                    }
+
+                    const rows = [];
+                    for (let i = hRow + 1; i < aoa.length; i++) {
+                        const r = aoa[i];
+                        const name = String(r[cName] || '').replace(/\s+/g, ' ').trim();
+                        const requirement = String(r[cReq] || '').replace(/\s+/g, ' ').trim();
+                        if (!name || !requirement) continue;
+                        if (normalizeKeyLoose_(name) === 'na') continue; // dòng lỗi công thức #N/A
+                        const productId = cId === -1 ? '' : String(r[cId] || '').trim().replace(/\.0+$/, '').replace(/\D/g, '');
+                        rows.push({ name, requirement, productId });
+                    }
+                    resolve({ rows, sheetName: String(target).trim() });
+                } catch (e) {
+                    reject(new Error('Lỗi đọc file Excel. Kiểm tra định dạng file.'));
+                }
+            };
+            fr.readAsArrayBuffer(file);
+        });
+    }
+
+    // Upload Return Policy
     $('policyFileInput').addEventListener('change', async function (e) {
         const file = e.target.files[0];
         e.target.value = "";
         if (!file) return;
         const btn = $('btnPolicy');
         btn.disabled = true;
-        showProgress_('policyProgress', "⏳ Đang đọc file Excel...", "info");
+        showProgress_('policyProgress', "⏳ Đang đọc file Excel (file lớn có thể mất vài giây)...", "info");
         try {
-            const raw = await readFirstSheetRows_(file);
-            if (!raw.length) throw new Error("File không có dữ liệu.");
-            const nm = buildNormMap_(raw[0]);
-            const mapped = raw.map(row => ({
-                name: pickField_(row, nm, ["productname", "tensanpham", "tensp", "shortname", "name"]),
-                requirement: pickField_(row, nm, ["requirement", "yeucau", "dieukien", "returnpolicy", "chinhsachdoitra"])
-            })).filter(r => r.name && r.requirement);
-            if (!mapped.length) {
-                throw new Error("Không tìm thấy dữ liệu ở 2 cột Product Name và Requirement. Các cột đọc được: " + Object.keys(raw[0]).join(", "));
-            }
+            const { rows, sheetName } = await readPolicyRows_(file);
+            if (!rows.length) throw new Error(`Sheet "${sheetName}" không có dòng nào có đủ Product Name và Requirement.`);
 
-            showProgress_('policyProgress', `⏳ Đang gửi ${mapped.length} dòng chính sách lên backend...`, "info");
-            const res = await postJSON_({ action: "import_policy", rows: mapped });
+            showProgress_('policyProgress', `⏳ Đang gửi ${rows.length} dòng chính sách (sheet "${sheetName}") lên backend...`, "info");
+            const res = await postJSON_({ action: "import_policy", rows });
             if (!(res && res.success)) throw new Error((res && (res.error || res.message)) || "Cập nhật thất bại.");
-            let msg = `✅ Đã lưu ${res.total} chính sách (mới ${res.added} · cập nhật ${res.updated})`;
+            let msg = `✅ Đã lưu ${res.total} chính sách (mới ${res.added} · cập nhật ${res.updated}`;
+            if (res.duplicates) msg += ` · bỏ ${res.duplicates} dòng trùng`;
+            msg += ")";
             if (res.products) msg += ` · khớp ${res.matched}/${res.products} sản phẩm trong danh mục`;
             showProgress_('policyProgress', msg, "success");
             fetchMasterData();
