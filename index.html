@@ -4,1099 +4,1151 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>1167-Trương Định</title>
-    
     <link class="no-print" rel="icon" type="image/png" href="https://upload.wikimedia.org/wikipedia/commons/thumb/4/40/7-eleven_logo.svg/960px-7-eleven_logo.svg.png">
-    <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        sevGreen: {
-                            50: '#f0fdf4',
-                            100: '#dcfce7',
-                            600: '#00843D',
-                            700: '#006c31',
-                            950: '#022c16',
-                        },
-                        sevOrange: {
-                            500: '#EE2E24',
-                            600: '#d62219',
-                        }
-                    }
-                }
+        // Áp dụng chế độ sáng/tối ngay từ đầu để không bị nháy màu khi tải trang
+        try {
+            var t = localStorage.getItem('theme');
+            if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
             }
-        }
+        } catch (e) {}
     </script>
-    <!-- Ghim phiên bản cụ thể (2.3.8) thay vì tải "latest" từ unpkg: bản mới nhất không rõ
-         thay đổi gì có thể là nguyên nhân gây lỗi quét trên iOS. defer để các thư viện này
-         (chỉ dùng khi bấm nút) không chặn render trang lúc tải đầu tiên. -->
-    <script defer src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
     <style>
+        /* ============ GIAO DIỆN NHẸ: không blur, không animation, không CDN CSS ============ */
         :root{
-            --lg-green:#00a884;
-            --lg-red:#ff453a;
-            --lg-orange:#ff9f45;
+            --bg:#eef2f0; --card:#ffffff; --text:#1f2a24; --muted:#66756d; --border:#dbe3de;
+            --input:#ffffff; --soft:#f3f6f4;
+            --green:#00843D; --green-d:#006c31; --red:#EE2E24; --red-d:#d62219;
+            --tint-green:#ecfdf3; --tint-red:#fff1ee; --tint-teal:#effcf8; --tint-gray:#f4f4f5; --due:#ffe9e5;
         }
-        .bg-liquid{
-            position:fixed; inset:0; z-index:-1; overflow:hidden;
-            background:linear-gradient(160deg,#e9f3ef 0%,#eef1f5 45%,#fbeee6 100%);
-            transition:background .3s ease;
+        .dark{
+            --bg:#0e1311; --card:#171d1a; --text:#e8efeb; --muted:#93a39a; --border:#2a342f;
+            --input:#1f2723; --soft:#1f2723;
+            --tint-green:#14301f; --tint-red:#3a1d1a; --tint-teal:#12302b; --tint-gray:#222a26; --due:#3d201c;
+            color-scheme:dark;
         }
-        .dark .bg-liquid{ background:linear-gradient(160deg,#0c1512 0%,#101216 45%,#1a120f 100%); }
+        *{ box-sizing:border-box; }
+        html{ -webkit-text-size-adjust:100%; }
+        body{
+            margin:0; background:var(--bg); color:var(--text);
+            font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+            font-size:14px; line-height:1.4; -webkit-tap-highlight-color:transparent;
+        }
+        button,input,select{ font:inherit; color:inherit; }
+        button{ cursor:pointer; touch-action:manipulation; }
+        .hidden{ display:none !important; }
+        .container{ max-width:1280px; margin:0 auto; padding:16px; }
 
-        .blob{ position:absolute; filter:blur(90px); opacity:.5; will-change:transform,border-radius; transform:translateZ(0); }
-        .dark .blob{ opacity:.32; filter:blur(100px); }
-        .blob.b1{ width:560px; height:560px; top:-190px; left:-160px;
-            background:radial-gradient(circle at 30% 30%, var(--lg-green), transparent 70%);
-            animation:lgFloat1 24s ease-in-out infinite; }
-        .blob.b2{ width:500px; height:500px; bottom:-210px; right:-150px;
-            background:radial-gradient(circle at 60% 40%, var(--lg-red), transparent 70%);
-            animation:lgFloat2 27s ease-in-out infinite; }
-        .blob.b3{ width:420px; height:420px; bottom:4%; left:4%;
-            background:radial-gradient(circle at 50% 50%, var(--lg-orange), transparent 70%);
-            animation:lgFloat3 20s ease-in-out infinite; }
-        /* Trên màn hình nhỏ (điện thoại), 3 blob mờ + animation liên tục chạy dưới các lớp
-           glass (backdrop-filter) là nguyên nhân chính gây lag/giật trên iOS Safari, vì
-           backdrop-filter phải tính lại mỗi khung hình khi nội dung phía sau đang animate.
-           Giảm bớt số blob + tắt animation trên di động để nhẹ máy, giao diện gần như
-           không đổi khi đứng yên. */
-        @media (max-width: 768px){
-            .blob{ filter:blur(60px); animation:none !important; }
-            .blob.b3{ display:none; }
+        /* Thanh trên */
+        .topbar{
+            background:#0f1a15; color:#fff; border-radius:16px; padding:14px 16px; margin-bottom:16px;
+            display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
+            box-shadow:inset 0 3px 0 var(--green);
         }
-        @keyframes lgFloat1{
-            0%{ transform:translate(0,0) scale(1); border-radius:58% 42% 61% 39% / 41% 57% 43% 59%; }
-            50%{ transform:translate(55px,45px) scale(1.07); border-radius:41% 59% 47% 53% / 61% 39% 61% 39%; }
-            100%{ transform:translate(0,0) scale(1); border-radius:58% 42% 61% 39% / 41% 57% 43% 59%; }
-        }
-        @keyframes lgFloat2{
-            0%{ transform:translate(0,0) scale(1); border-radius:47% 53% 62% 38% / 53% 45% 55% 47%; }
-            50%{ transform:translate(-48px,-35px) scale(1.05); border-radius:60% 40% 44% 56% / 40% 62% 38% 60%; }
-            100%{ transform:translate(0,0) scale(1); border-radius:47% 53% 62% 38% / 53% 45% 55% 47%; }
-        }
-        @keyframes lgFloat3{
-            0%{ transform:translate(0,0) scale(1); border-radius:50% 50% 40% 60% / 60% 40% 60% 40%; }
-            50%{ transform:translate(30px,-30px) scale(0.94); border-radius:60% 40% 55% 45% / 40% 55% 45% 60%; }
-            100%{ transform:translate(0,0) scale(1); border-radius:50% 50% 40% 60% / 60% 40% 60% 40%; }
-        }
-        @media (prefers-reduced-motion: reduce){ .blob{ animation:none !important; } }
+        .brand{ display:flex; align-items:center; gap:12px; min-width:0; }
+        .brand img{ width:48px; height:48px; border-radius:12px; background:#fff; padding:2px; object-fit:cover; flex-shrink:0; }
+        .brand h1{ margin:0; font-size:17px; font-weight:700; }
+        .brand h1 .sep{ color:var(--red); }
+        .brand h1 .accent{ color:#34d399; }
+        .brand p{ margin:2px 0 0; color:#a1a1aa; font-size:12px; }
+        .top-actions{ display:flex; gap:8px; flex-wrap:wrap; }
 
-        /* Frosted card surface used for the header bar and both main panels.
-           Kept as its own class (rather than layered on top of Tailwind's
-           bg-* utilities) so there's no specificity fight with the CDN's
-           injected stylesheet. */
-        .glass{
-            background:linear-gradient(180deg, rgba(255,255,255,0.62), rgba(255,255,255,0.34));
-            backdrop-filter:blur(20px) saturate(180%);
-            -webkit-backdrop-filter:blur(20px) saturate(180%);
-            border:1px solid rgba(255,255,255,0.55);
-            box-shadow:0 18px 45px -22px rgba(20,40,35,0.22), inset 0 1px 0 rgba(255,255,255,.7);
-        }
-        .dark .glass{
-            background:linear-gradient(180deg, rgba(32,34,40,0.62), rgba(20,22,26,0.46));
-            border-color:rgba(255,255,255,0.08);
-            box-shadow:0 18px 45px -22px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,.06);
-        }
-        .glass-header{
-            background:linear-gradient(180deg, rgba(14,24,19,0.78), rgba(9,14,12,0.66));
-            backdrop-filter:blur(20px) saturate(160%);
-            -webkit-backdrop-filter:blur(20px) saturate(160%);
-            border:1px solid rgba(255,255,255,0.08);
-        }
-        .glass-input{
-            background:rgba(255,255,255,0.55) !important;
-            backdrop-filter:blur(8px);
-            -webkit-backdrop-filter:blur(8px);
-        }
-        .dark .glass-input{ background:rgba(255,255,255,0.07) !important; }
+        /* Nút */
+        .btn{ border:0; border-radius:10px; padding:9px 14px; font-weight:600; color:#fff; background:#52525b; }
+        .btn:active{ opacity:.8; }
+        .btn:disabled{ opacity:.5; pointer-events:none; }
+        .btn-green{ background:var(--green); }
+        .btn-orange{ background:var(--red); }
+        .btn-rose{ background:#f43f5e; }
+        .btn-emerald{ background:#059669; }
+        .btn-dark{ background:#27272a; }
+        .btn-indigo{ background:#6366f1; }
+        .btn-violet{ background:#7c3aed; }
+        .btn-ghost{ background:rgba(255,255,255,.14); color:#d1fae5; }
+        .btn-block{ width:100%; }
+        .btn-icon{ width:40px; padding:9px 0; }
 
-        /* backdrop-filter (blur+saturate) trên toàn bộ khung + header + từng input là chi phí
-           lớn nhất khi render lại (gõ liệu, cuộn, mở modal) trên điện thoại đời cũ/iOS Safari.
-           Giảm bán kính blur trên màn hình nhỏ giúp mượt hơn rõ rệt mà giao diện gần như
-           không đổi mắt thường. */
-        @media (max-width: 768px){
-            .glass, .glass-header{ backdrop-filter:blur(10px) saturate(140%); -webkit-backdrop-filter:blur(10px) saturate(140%); }
-            .glass-input{ backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); }
-        }
+        /* Khung */
+        .panel{ background:var(--card); border:1px solid var(--border); border-radius:16px; padding:18px; }
+        .panel-head{ display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:8px; margin-bottom:12px; }
+        .panel-head h2{ margin:0; font-size:17px; font-weight:700; }
+        .btn-row{ display:flex; flex-wrap:wrap; gap:8px; }
+        .layout{ display:grid; grid-template-columns:1fr; gap:16px; }
+        @media (min-width:1024px){ .layout{ grid-template-columns:340px 1fr; align-items:start; } }
 
-        /* Reusable "liquid" button treatment: translucency + a light sweep on
-           hover, layered on top of Tailwind's own bg-color/opacity classes so
-           each action keeps its semantic hue (orange = record, green = send,
-           rose = delete...). */
-        .liquid-btn{
-            position:relative;
-            overflow:hidden;
-            backdrop-filter:blur(6px);
-            -webkit-backdrop-filter:blur(6px);
-            border:1px solid rgba(255,255,255,0.35);
-            box-shadow:0 6px 16px -8px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.45);
-            transition:transform .3s cubic-bezier(.2,.9,.3,1.2), box-shadow .3s ease;
+        /* Trang chủ */
+        .home-grid{ display:grid; grid-template-columns:1fr; gap:16px; max-width:900px; margin:20px auto; }
+        @media (min-width:700px){ .home-grid{ grid-template-columns:1fr 1fr; } }
+        .home-card{
+            display:flex; flex-direction:column; align-items:flex-start; gap:6px; text-align:left;
+            background:var(--card); border:1px solid var(--border); border-radius:20px; padding:26px; color:var(--text);
         }
-        .liquid-btn::after{
-            content:'';
-            position:absolute; top:-50%; left:-30%;
-            width:40%; height:200%;
-            background:linear-gradient(120deg, transparent, rgba(255,255,255,.55), transparent);
-            transform:translateX(-140%) rotate(8deg);
-            transition:transform .6s ease;
-            pointer-events:none;
-        }
-        .liquid-btn:hover{ transform:translateY(-1px) scale(1.012); }
-        .liquid-btn:hover::after{ transform:translateX(160%) rotate(8deg); }
-        .liquid-btn:active{ transform:translateY(0) scale(0.98); }
-        .dark .liquid-btn{ border-color:rgba(255,255,255,0.12); box-shadow:0 6px 16px -8px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08); }
+        .home-card:active{ background:var(--soft); }
+        @media (hover:hover){ .home-card:hover{ border-color:var(--green); } }
+        .home-card .ico{ font-size:40px; line-height:1; }
+        .home-card .t{ font-size:20px; font-weight:700; }
+        .home-card .d{ color:var(--muted); }
+        .badge{ display:inline-block; background:var(--red); color:#fff; font-size:12px; font-weight:700; padding:1px 9px; border-radius:999px; margin-left:6px; }
 
-        .lg-appear{ animation:lgAppear .7s cubic-bezier(.16,1,.3,1) both; }
-        @keyframes lgAppear{
-            0%{ opacity:0; transform:translateY(10px) scale(0.99); filter:blur(6px); }
-            100%{ opacity:1; transform:translateY(0) scale(1); filter:blur(0); }
+        /* Form */
+        .field{ margin-bottom:14px; }
+        label{ display:block; font-weight:600; font-size:13px; margin-bottom:4px; color:var(--muted); }
+        .input{
+            width:100%; padding:9px 12px; border:1px solid var(--border); border-radius:10px;
+            background:var(--input); color:var(--text); outline:none;
         }
-        @media (prefers-reduced-motion: reduce){ .lg-appear{ animation:none; } }
+        .input:focus{ border-color:var(--green); box-shadow:0 0 0 2px rgba(0,132,61,.25); }
+        .input-bold{ font-weight:700; }
+        .row{ display:flex; gap:8px; }
+        .box{ background:var(--soft); border:1px solid var(--border); border-radius:12px; padding:10px; }
+        .hint{ font-size:12px; margin:4px 0 0; min-height:16px; font-weight:600; color:var(--muted); }
+        .hint.ok{ color:#059669; } .hint.teal{ color:#0d9488; }
+        .policy-line{ display:flex; justify-content:space-between; align-items:center; gap:8px; margin-top:6px; padding:8px; border:1px dashed var(--border); border-radius:10px; font-size:12px; font-weight:600; color:var(--muted); }
+        .policy-val{ font-weight:700; color:#0f766e; background:var(--tint-teal); padding:2px 8px; border-radius:6px; border:1px solid var(--border); text-align:right; }
+        #camera-container{ border:2px dashed var(--border); border-radius:12px; padding:8px; margin-top:8px; }
+        #reader{ width:100%; border-radius:10px; overflow:hidden; }
 
-        /* ============ IN ẤN: vừa 1 trang A4 duy nhất (ngang) ============ */
-        @page {
-            size: A4 landscape;
-            margin: 8mm;
+        /* Gợi ý tên sản phẩm (thay datalist nặng) */
+        .suggest-wrap{ position:relative; }
+        .suggest{
+            position:absolute; left:0; right:0; top:100%; margin:4px 0 0; padding:4px; list-style:none;
+            background:var(--card); border:1px solid var(--border); border-radius:10px;
+            max-height:240px; overflow-y:auto; z-index:20; box-shadow:0 6px 16px rgba(0,0,0,.15);
         }
-        @media print {
-            .no-print, #camera-container, button, #themeToggleBtn, .bg-zinc-900, .bg-liquid {
-                display: none !important;
+        .suggest li{ padding:8px 10px; border-radius:8px; cursor:pointer; }
+        .suggest li:hover, .suggest li:active{ background:var(--soft); }
+
+        /* Chip trạng thái */
+        .chip{ font-size:12px; font-weight:600; padding:2px 9px; border-radius:999px; }
+        .chip-wait{ background:#fef3c7; color:#b45309; }
+        .chip-ok{ background:#d1fae5; color:#047857; }
+        .chip-err{ background:#ffe4e6; color:#be123c; }
+
+        /* Bảng */
+        .table-wrap{ overflow-x:auto; border:1px solid var(--border); border-radius:12px; }
+        table{ width:100%; border-collapse:collapse; font-size:13px; }
+        th{ background:var(--green); color:#fff; padding:10px; text-align:left; white-space:nowrap; font-weight:600; }
+        td{ padding:9px 10px; border-bottom:1px solid var(--border); }
+        .c{ text-align:center; }
+        .mono{ font-family:ui-monospace,Menlo,Consolas,monospace; font-size:12px; color:var(--muted); }
+        .strong{ font-weight:600; }
+        .th-sl{ background:#006c31; } .th-rut{ background:#065f46; } .th-pull{ background:var(--red); cursor:pointer; user-select:none; }
+        .th-scan{ background:#27272a; } .th-policy{ background:#115e59; } .th-emp{ background:#3f3f46; } .th-cd{ background:#b45309; }
+        td.qty{ font-weight:700; background:var(--tint-gray); }
+        td.pt{ font-weight:700; color:var(--green-d); background:var(--tint-green); }
+        td.pd{ font-weight:700; color:var(--red-d); background:var(--tint-red); }
+        td.pol{ font-weight:600; color:#0f766e; background:var(--tint-teal); }
+        tr.due td{ background:var(--due); }
+        .del{ background:none; border:0; color:#f43f5e; font-weight:700; font-size:15px; }
+        .empty{ text-align:center; padding:28px 0; color:var(--muted); }
+        .cd{ display:inline-block; padding:2px 10px; border-radius:999px; font-weight:700; font-size:12px; white-space:nowrap; }
+        .cd-green{ background:#dcfce7; color:#166534; }
+        .cd-orange{ background:#ffedd5; color:#9a3412; }
+        .cd-red{ background:#fee2e2; color:#b91c1c; }
+        .cd-na{ background:var(--tint-gray); color:var(--muted); }
+        .filters{ display:flex; flex-wrap:wrap; gap:8px; align-items:flex-end; margin-bottom:10px; }
+        .filters .f{ min-width:150px; }
+        .summary{ font-size:12px; color:var(--muted); margin:0 0 8px; font-weight:600; }
+
+        /* Cài đặt */
+        .overlay{ position:fixed; inset:0; background:rgba(0,0,0,.55); display:flex; align-items:center; justify-content:center; padding:16px; z-index:50; }
+        .modal{ width:100%; max-width:460px; max-height:90vh; overflow-y:auto; }
+        .modal-head{ display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:10px; margin-bottom:12px; }
+        .modal-head h3{ margin:0; font-size:16px; }
+        .upload-box{ border:1px dashed var(--border); border-radius:12px; padding:14px; background:var(--soft); margin-bottom:12px; }
+        .upload-box h4{ margin:0 0 6px; font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); }
+        .upload-box p{ margin:0 0 10px; font-size:12px; color:var(--muted); line-height:1.5; }
+        .progress{ margin-top:10px; font-size:12px; font-weight:600; text-align:center; padding:8px; border-radius:8px; }
+        .progress-info{ background:#e0e7ff; color:#4338ca; }
+        .progress-success{ background:#d1fae5; color:#047857; }
+        .progress-error{ background:#ffe4e6; color:#be123c; }
+
+        /* ============ IN ẤN: vừa 1 trang A4 ngang ============ */
+        @page{ size:A4 landscape; margin:8mm; }
+        @media print{
+            .no-print, .topbar, button, .suggest, .overlay{ display:none !important; }
+            html, body{ background:#fff !important; color:#000 !important; margin:0 !important; padding:0 !important; }
+            .container{ max-width:100% !important; padding:0 !important; }
+            .layout{ display:block !important; }
+            .panel{ border:none !important; background:#fff !important; padding:4px !important; transform-origin:top left; }
+            .table-wrap{ border:none !important; overflow:visible !important; }
+            table{ font-size:9px !important; }
+            thead{ display:table-header-group; }
+            tr{ break-inside:avoid; page-break-inside:avoid; }
+            td, th{
+                padding:3px 5px !important; color:#000 !important; font-size:9px !important; line-height:1.15 !important;
+                background:#fff !important; -webkit-print-color-adjust:exact; print-color-adjust:exact;
             }
-            html, body {
-                background: white !important;
-                color: black !important;
-                padding: 0 !important;
-                margin: 0 !important;
-                width: 100% !important;
-                height: auto !important;
-            }
-            .max-w-7xl { max-width: 100% !important; }
-            .print-full-width {
-                grid-template-columns: 100% !important;
-                width: 100% !important;
-                gap: 0 !important;
-                display: block !important;
-            }
-            .print-table-container {
-                width: 100% !important;
-                border: none !important;
-                padding: 4px !important;
-                background: white !important;
-                backdrop-filter: none !important;
-                box-shadow: none !important;
-                transform-origin: top left;
-            }
-            table {
-                width: 100% !important;
-                border-collapse: collapse !important;
-                font-size: 9px !important;
-            }
-            thead { display: table-header-group; }
-            tr {
-                page-break-inside: avoid !important;
-                break-inside: avoid !important;
-            }
-            td, th {
-                padding: 3px 5px !important;
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-                color: black !important;
-                font-size: 9px !important;
-                line-height: 1.15 !important;
-            }
-            thead tr th {
-                color: white !important;
-                background-color: #00843D !important;
-            }
-            h2 { font-size: 13px !important; margin-bottom: 4px !important; }
+            thead th{ color:#fff !important; background:#00843D !important; }
+            tr.due td{ background:#ffe9e5 !important; }
+            .panel-head h2{ font-size:13px !important; }
         }
     </style>
 </head>
-<body class="min-h-screen p-4 md:p-8 text-zinc-800 dark:text-zinc-100 transition-colors duration-300">
+<body>
 
-    <div class="bg-liquid no-print">
-        <div class="blob b1"></div>
-        <div class="blob b2"></div>
-        <div class="blob b3"></div>
-    </div>
-
-    <div class="max-w-7xl mx-auto relative z-10 lg-appear">
-        <div class="no-print glass-header text-white p-5 rounded-3xl mb-6 relative overflow-hidden flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div class="absolute top-0 left-[14%] w-[72%] h-[3px] rounded-full opacity-80" style="background:linear-gradient(to right, var(--lg-green), var(--lg-red), var(--lg-orange));"></div>
-            <div class="flex items-center gap-4">
-                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/40/7-eleven_logo.svg/960px-7-eleven_logo.svg.png" alt="Logo" class="w-14 h-14 rounded-2xl object-cover bg-white p-0.5 shadow-inner shrink-0">
-                <div>
-                    <h1 class="text-2xl font-bold tracking-wide text-white">1167-Trương Định <span class="text-sevOrange-500">|</span> <span class="text-emerald-400">WEBAPP KIỂM DATE NỘI BỘ</span></h1>
-                    <p class="text-zinc-400 text-sm mt-0.5">Thực hiện bởi Lâm Huy</p>
-                </div>
+<div class="container">
+    <header class="topbar no-print">
+        <div class="brand">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/40/7-eleven_logo.svg/960px-7-eleven_logo.svg.png" alt="Logo" width="48" height="48">
+            <div>
+                <h1>1167-Trương Định <span class="sep">|</span> <span class="accent">WEBAPP KIỂM DATE NỘI BỘ</span></h1>
+                <p>Thực hiện bởi Lâm Huy</p>
             </div>
-            <button onclick="toggleTheme()" id="themeToggleBtn" class="liquid-btn bg-white/10 hover:bg-white/20 text-emerald-300 px-4 py-2 rounded-xl text-sm font-semibold transition flex items-center gap-2 shrink-0 self-end sm:self-auto">
-                🌙 Chế độ tối
+        </div>
+        <div class="top-actions">
+            <button id="homeBtn" class="btn btn-ghost hidden" onclick="go('home')">🏠 Trang chủ</button>
+            <button id="themeToggleBtn" class="btn btn-ghost" onclick="toggleTheme()">🌙 Chế độ tối</button>
+            <button id="settingsBtn" class="btn btn-ghost btn-icon" title="Cài đặt" onclick="openSettings()">⚙️</button>
+        </div>
+    </header>
+
+    <!-- ============ TRANG CHỦ ============ -->
+    <section id="view-home" class="view no-print">
+        <div class="home-grid">
+            <button class="home-card" onclick="go('check')">
+                <span class="ico">✅</span>
+                <span class="t">Kiểm Date <span id="homePending" class="badge hidden"></span></span>
+                <span class="d">Quét mã, nhập hạn dùng và ghi nhận sản phẩm trong ca.</span>
             </button>
-            <button onclick="openSettings()" id="settingsBtn" title="Cài đặt" class="no-print liquid-btn bg-white/10 hover:bg-white/20 text-zinc-200 w-10 h-10 rounded-xl text-base transition flex items-center justify-center shrink-0 self-end sm:self-auto">
-                ⚙️
+            <button class="home-card" onclick="go('report')">
+                <span class="ico">📊</span>
+                <span class="t">Báo Cáo Kiểm Date</span>
+                <span class="d">Danh sách đã gửi lên hệ thống, lọc theo ngày phải rút và đếm ngược đến hết date.</span>
             </button>
         </div>
+    </section>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 print-full-width">
-            
-            <div class="no-print glass p-6 rounded-3xl h-fit transition-colors duration-300">
-                <div class="flex items-center justify-between mb-4 border-b border-zinc-200/60 dark:border-white/10 pb-2">
-                    <h2 class="text-lg font-semibold text-zinc-800 dark:text-white">Thông Tin Kiểm Kê</h2>
-                    <span id="syncStatus" class="text-xs bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400 px-2 py-0.5 rounded-full font-medium animate-pulse">⏳ Đang tải Danh mục...</span>
+    <!-- ============ KIỂM DATE ============ -->
+    <section id="view-check" class="view hidden">
+        <div class="layout">
+            <div class="panel no-print">
+                <div class="panel-head">
+                    <h2>Thông Tin Kiểm Kê</h2>
+                    <span id="syncStatus" class="chip chip-wait">⏳ Đang tải Danh mục...</span>
                 </div>
-                
-                <div class="space-y-4">
-                    <div class="bg-white/25 dark:bg-white/5 p-3 rounded-xl border border-white/40 dark:border-white/10">
-                        <label class="block text-sm font-semibold text-zinc-700 dark:text-zinc-300 mb-1">👤 Tên Nhân Viên Kiểm Date</label>
-                        <input type="text" id="employeeName" class="glass-input w-full border border-zinc-300/60 dark:border-white/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sevGreen-600 font-medium dark:text-white" placeholder="Nhập tên của bạn...">
-                    </div>
 
-                    <div>
-                        <label class="block text-sm font-medium text-zinc-600 dark:text-zinc-300 mb-1">Mã Barcode</label>
-                        <div class="flex gap-2">
-                            <input type="text" id="barcode" class="glass-input w-full border border-zinc-300/60 dark:border-white/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sevGreen-600 font-mono dark:text-white" placeholder="Nhập hoặc quét mã...">
-                            <button onclick="toggleCamera()" class="liquid-btn bg-zinc-800/85 dark:bg-zinc-950/85 text-white px-3 py-2 rounded-xl text-xs font-medium transition">📷 Camera</button>
-                        </div>
-                        <div id="camera-container" class="hidden border-2 border-dashed border-zinc-400/60 dark:border-white/15 rounded-xl p-2 bg-white/30 dark:bg-black/20 mt-2">
-                            <div id="reader" class="w-full rounded-xl overflow-hidden"></div>
-                            <button onclick="stopCamera()" class="w-full mt-2 bg-rose-500 text-white text-xs py-1.5 rounded-xl">Tắt Camera</button>
-                        </div>
-                        <p id="memoryAlert" class="text-xs mt-1 min-h-[16px] font-medium text-zinc-400 dark:text-zinc-400"></p>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-zinc-600 dark:text-zinc-300 mb-1">Tên Sản Phẩm</label>
-                        <input type="text" id="productName" list="productOptions" class="glass-input w-full border border-zinc-300/60 dark:border-white/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sevGreen-600 font-medium dark:text-white" placeholder="Chọn hoặc nhập tên sản phẩm...">
-                        <datalist id="productOptions"></datalist>
-                        
-                        <div class="text-xs font-medium text-zinc-500 dark:text-zinc-400 bg-white/25 dark:bg-white/5 p-2 rounded-xl border border-dashed border-zinc-300/60 dark:border-white/10 mt-1.5 flex justify-between items-center">
-                            <span>🔄 Chính sách Đổi trả NCC:</span>
-                            <span id="returnPolicyView" class="font-bold text-teal-700 dark:text-teal-400 bg-teal-50 dark:bg-teal-950/40 px-2 py-0.5 rounded-md border border-teal-200 dark:border-teal-900">-</span>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-zinc-600 dark:text-zinc-300 mb-1">Số Lượng Sản Phẩm</label>
-                        <input type="number" id="quantity" min="1" value="1" class="glass-input w-full border border-zinc-300/60 dark:border-white/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sevGreen-600 font-bold text-zinc-700 dark:text-white">
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-zinc-600 dark:text-zinc-300 mb-1">Ngày hết hạn (Expiry Date)</label>
-                        <input type="date" id="expiryDate" class="glass-input w-full border border-zinc-300/60 dark:border-white/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sevGreen-600 font-bold text-zinc-700 dark:text-white">
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-zinc-600 dark:text-zinc-300 mb-1">Quy định rút hàng</label>
-                        <select id="pullType" class="glass-input w-full border border-zinc-300/60 dark:border-white/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sevGreen-600 font-bold text-sevGreen-700 dark:text-emerald-400">
-                            <option value="H-2">H-2 (Rút trước khi hết date 2 giờ)</option>
-                            <option value="D-1">D-1 (Rút trước khi hết date 1 ngày)</option>
-                            <option value="D-3">D-3 (Rút trước khi hết date 3 ngày)</option>
-                            <option value="D-7">D-7 (Rút trước khi hết date 7 ngày)</option>
-                            <option value="D-15">D-15 (Rút trước khi hết date 15 ngày)</option>
-                        </select>
-                    </div>
-
-                    <button onclick="addItem()" class="liquid-btn w-full bg-sevOrange-500/90 hover:bg-sevOrange-600/90 text-white font-bold py-2.5 rounded-xl text-sm transition mt-2 tracking-wide">Ghi Nhận Kiểm Date (Tạm Tính)</button>
+                <div class="box field">
+                    <label for="employeeName">👤 Tên Nhân Viên Kiểm Date</label>
+                    <input type="text" id="employeeName" class="input input-bold" placeholder="Nhập tên của bạn...">
                 </div>
+
+                <div class="field">
+                    <label for="barcode">Mã Barcode</label>
+                    <div class="row">
+                        <input type="text" id="barcode" class="input mono" style="color:var(--text)" placeholder="Nhập hoặc quét mã..." inputmode="numeric" autocomplete="off">
+                        <button class="btn btn-dark" onclick="toggleCamera()">📷 Camera</button>
+                    </div>
+                    <div id="camera-container" class="hidden">
+                        <div id="reader"></div>
+                        <button class="btn btn-rose btn-block" style="margin-top:8px" onclick="stopCamera()">Tắt Camera</button>
+                    </div>
+                    <p id="memoryAlert" class="hint"></p>
+                </div>
+
+                <div class="field">
+                    <label for="productName">Tên Sản Phẩm</label>
+                    <div class="suggest-wrap" id="suggestWrap">
+                        <input type="text" id="productName" class="input input-bold" placeholder="Gõ để tìm hoặc nhập tên sản phẩm..." autocomplete="off">
+                        <ul id="suggest" class="suggest hidden"></ul>
+                    </div>
+                    <div class="policy-line">
+                        <span>🔄 Chính sách Đổi trả NCC:</span>
+                        <span id="returnPolicyView" class="policy-val">-</span>
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label for="quantity">Số Lượng Sản Phẩm</label>
+                    <input type="number" id="quantity" min="1" value="1" class="input input-bold">
+                </div>
+
+                <div class="field">
+                    <label for="expiryDate">Ngày hết hạn (Expiry Date)</label>
+                    <input type="date" id="expiryDate" class="input input-bold">
+                </div>
+
+                <div class="field">
+                    <label for="pullType">Quy định rút hàng</label>
+                    <select id="pullType" class="input input-bold" style="color:var(--green-d)">
+                        <option value="H-2">H-2 (Rút trước khi hết date 2 giờ)</option>
+                        <option value="D-1">D-1 (Rút trước khi hết date 1 ngày)</option>
+                        <option value="D-3">D-3 (Rút trước khi hết date 3 ngày)</option>
+                        <option value="D-7">D-7 (Rút trước khi hết date 7 ngày)</option>
+                        <option value="D-15">D-15 (Rút trước khi hết date 15 ngày)</option>
+                    </select>
+                </div>
+
+                <button class="btn btn-orange btn-block" onclick="addItem()">Ghi Nhận Kiểm Date (Tạm Tính)</button>
             </div>
 
-            <div class="lg:col-span-2 glass p-6 rounded-3xl transition-colors duration-300 print-table-container">
-                <div class="flex flex-wrap justify-between items-center mb-4 gap-2">
-                    <h2 class="text-lg font-semibold text-zinc-800 dark:text-white print:text-xl print:font-bold">Danh Sách Báo Cáo Date Trong Ca</h2>
-                    
-                    <div class="no-print flex flex-wrap gap-2">
-                        <button onclick="window.print()" class="liquid-btn bg-zinc-600/85 text-white font-medium px-3 py-2 rounded-xl text-sm transition flex items-center gap-1">
-                            🖨️ In
-                        </button>
-                        <button onclick="exportToExcel()" class="liquid-btn bg-emerald-600/85 text-white font-medium px-3 py-2 rounded-xl text-sm transition">
-                            📦 Excel
-                        </button>
-                        <button onclick="clearAllData()" class="liquid-btn bg-rose-500/85 text-white font-medium px-3 py-2 rounded-xl text-sm transition">
-                            🗑️ Xóa Tất Cả
-                        </button>
-                        <button onclick="submitDataToSheet()" id="btnSubmitSheet" class="liquid-btn bg-sevGreen-600/90 text-white font-bold px-4 py-2 rounded-xl text-sm transition flex items-center gap-1">
-                            🚀 Gửi & Chốt Ca
-                        </button>
+            <div class="panel print-table-container">
+                <div class="panel-head">
+                    <h2>Danh Sách Chờ Gửi — Báo Cáo Date Trong Ca</h2>
+                    <div class="btn-row no-print">
+                        <button class="btn" onclick="window.print()">🖨️ In</button>
+                        <button class="btn btn-emerald" onclick="exportToExcel()">📦 Excel</button>
+                        <button class="btn btn-rose" onclick="clearAllData()">🗑️ Xóa Tất Cả</button>
+                        <button id="btnSubmitSheet" class="btn btn-green" onclick="submitDataToSheet()">🚀 Gửi &amp; Chốt Ca</button>
                     </div>
                 </div>
-
-                <div class="overflow-x-auto rounded-xl border border-white/40 dark:border-white/10">
-                    <table class="w-full text-left text-sm border-collapse">
+                <div class="table-wrap">
+                    <table>
                         <thead>
-                            <tr class="bg-sevGreen-600/95 dark:bg-sevGreen-950/95 backdrop-blur-sm border-b border-sevGreen-700 text-white font-medium">
-                                <th class="p-3">Barcode</th>
-                                <th class="p-3">Tên Sản Phẩm</th>
-                                <th class="p-3 text-center bg-sevGreen-700 dark:bg-zinc-900">SL</th>
-                                <th class="p-3">Ngày Hết Hạn</th>
-                                <th class="p-3 text-center bg-emerald-900 dark:bg-emerald-950">Mã Rút</th>
-                                <th onclick="toggleSortPullDate()" class="p-3 text-center bg-sevOrange-500 text-white font-bold cursor-pointer select-none hover:bg-sevOrange-600 transition shadow-inner">
-                                    Ngày Phải Rút <span id="sortIcon" class="text-xs ml-0.5">↕</span>
-                                </th>
-                                <th class="p-3 bg-zinc-800 dark:bg-zinc-950 text-center">Ngày Giờ Quét</th>
-                                <th class="p-3 bg-teal-800 dark:bg-teal-950 text-center">Đổi Trả NCC</th>
-                                <th class="p-3 bg-zinc-700 dark:bg-zinc-900 text-center">Nhân Viên</th>
-                                <th class="p-3 text-center no-print">Xóa</th>
+                            <tr>
+                                <th>Barcode</th>
+                                <th>Tên Sản Phẩm</th>
+                                <th class="c th-sl">SL</th>
+                                <th>Ngày Hết Hạn</th>
+                                <th class="c th-rut">Mã Rút</th>
+                                <th class="c th-pull" onclick="toggleSortPullDate()">Ngày Phải Rút <span id="sortIcon">↕</span></th>
+                                <th class="c th-scan">Ngày Giờ Quét</th>
+                                <th class="c th-policy">Đổi Trả NCC</th>
+                                <th class="c th-emp">Nhân Viên</th>
+                                <th class="c no-print">Xóa</th>
                             </tr>
                         </thead>
                         <tbody id="dateInventoryList"></tbody>
                     </table>
                 </div>
-                <div id="emptyAlert" class="text-center py-8 text-zinc-400 dark:text-zinc-500 text-sm">Chưa có dữ liệu kiểm date nào được nhập.</div>
+                <div id="emptyAlert" class="empty">Chưa có dữ liệu kiểm date nào được nhập.</div>
             </div>
         </div>
-    </div>
+    </section>
 
-    <!-- Modal Cài đặt: chứa nút cập nhật database, ẩn khỏi màn hình vận hành chính -->
-    <div id="settingsOverlay" class="no-print hidden fixed inset-0 bg-black/40 backdrop-blur-md z-50 flex items-center justify-center p-4">
-        <div class="glass lg-appear rounded-3xl w-full max-w-md p-6">
-            <div class="flex items-center justify-between mb-4 border-b border-zinc-200/60 dark:border-white/10 pb-3">
-                <h3 class="text-base font-bold text-zinc-800 dark:text-white">⚙️ Cài đặt</h3>
-                <button onclick="closeSettings()" class="liquid-btn w-8 h-8 rounded-full bg-zinc-100/60 dark:bg-white/10 text-zinc-500 dark:text-zinc-300 flex items-center justify-center transition">✕</button>
+    <!-- ============ BÁO CÁO KIỂM DATE ============ -->
+    <section id="view-report" class="view hidden">
+        <div class="panel print-table-container">
+            <div class="panel-head">
+                <h2>Báo Cáo Kiểm Date</h2>
+                <div class="btn-row no-print">
+                    <button class="btn" onclick="window.print()">🖨️ In</button>
+                    <button id="btnReportRefresh" class="btn btn-green" onclick="loadReport()">🔄 Làm mới</button>
+                </div>
+            </div>
+            <div class="no-print" style="margin-bottom:8px"><span id="reportStatus" class="chip chip-wait">⏳ Đang tải báo cáo...</span></div>
+
+            <div class="filters no-print">
+                <div class="f">
+                    <label for="reportFilter">Lọc theo ngày phải rút</label>
+                    <select id="reportFilter" class="input" onchange="renderReport()">
+                        <option value="all">Tất cả</option>
+                        <option value="due">Đến hạn rút (hôm nay &amp; quá hạn)</option>
+                        <option value="3">Đến hạn trong 3 ngày tới</option>
+                        <option value="7">Đến hạn trong 7 ngày tới</option>
+                    </select>
+                </div>
+                <div class="f">
+                    <label for="reportDate">Hoặc chọn đúng 1 ngày</label>
+                    <input type="date" id="reportDate" class="input" oninput="renderReport()">
+                </div>
+                <button class="btn" onclick="resetReportFilter()">Bỏ lọc</button>
             </div>
 
-            <div class="p-4 rounded-xl border border-dashed border-zinc-300/60 dark:border-white/15 bg-white/25 dark:bg-white/5">
-                <h4 class="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide mb-2">Cập nhật Database</h4>
-                <p class="text-xs text-zinc-500 dark:text-zinc-400 mb-3 leading-relaxed">Tải lên file Excel dữ liệu gốc (Group, Category, Sub Category, Product ID, Short Name, Base Upc) để tự động cập nhật danh mục sản phẩm dùng để tra cứu Barcode / Tên / Chính sách đổi trả.</p>
-                <input type="file" id="importFileInput" accept=".xlsx,.xls" class="hidden">
-                <button id="btnImport" onclick="document.getElementById('importFileInput').click()" class="liquid-btn w-full bg-gradient-to-r from-indigo-500/90 to-violet-500/90 text-white font-semibold py-2.5 rounded-xl text-sm transition disabled:opacity-50 disabled:pointer-events-none">
-                    📤 TẢI FILE EXCEL LÊN
-                </button>
-                <div id="importProgress" class="hidden mt-3 text-xs font-semibold text-center py-2 rounded-lg"></div>
+            <p id="reportSummary" class="summary no-print"></p>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Barcode</th>
+                            <th>Tên Sản Phẩm</th>
+                            <th class="c th-sl">SL</th>
+                            <th>Ngày Hết Hạn</th>
+                            <th class="c th-rut">Mã Rút</th>
+                            <th class="c th-pull" onclick="toggleReportSort()">Ngày Phải Rút <span id="reportSortIcon">▲</span></th>
+                            <th class="c th-scan">Ngày Giờ Quét</th>
+                            <th class="c th-policy">Đổi Trả NCC</th>
+                            <th class="c th-emp">Nhân Viên</th>
+                            <th class="c th-cd">Đếm Ngược Hết Date</th>
+                        </tr>
+                    </thead>
+                    <tbody id="reportList"></tbody>
+                </table>
             </div>
+            <div id="reportEmpty" class="empty hidden">Không có dòng nào để hiển thị.</div>
+        </div>
+    </section>
+</div>
+
+<!-- Cài đặt -->
+<div id="settingsOverlay" class="overlay no-print hidden">
+    <div class="panel modal">
+        <div class="modal-head">
+            <h3>⚙️ Cài đặt</h3>
+            <button class="btn btn-icon" style="width:34px;padding:6px 0" onclick="closeSettings()">✕</button>
+        </div>
+
+        <div class="upload-box">
+            <h4>Cập nhật Database sản phẩm</h4>
+            <p>Tải lên file Excel dữ liệu gốc (Group, Category, Sub Category, Product ID, Short Name, Base Upc) để cập nhật danh mục tra cứu Barcode / Tên sản phẩm.</p>
+            <input type="file" id="importFileInput" accept=".xlsx,.xls" class="hidden">
+            <button id="btnImport" class="btn btn-indigo btn-block" onclick="document.getElementById('importFileInput').click()">📤 TẢI FILE EXCEL LÊN</button>
+            <div id="importProgress" class="progress hidden"></div>
+        </div>
+
+        <div class="upload-box">
+            <h4>Cập nhật Return Policy</h4>
+            <p>Tải lên file Excel chính sách đổi trả có 2 cột <b>Product Name</b> và <b>Requirement</b>. Backend sẽ tự đối chiếu tên sản phẩm để gán chính sách đổi trả.</p>
+            <input type="file" id="policyFileInput" accept=".xlsx,.xls" class="hidden">
+            <button id="btnPolicy" class="btn btn-violet btn-block" onclick="document.getElementById('policyFileInput').click()">🔄 TẢI FILE RETURN POLICY</button>
+            <div id="policyProgress" class="progress hidden"></div>
         </div>
     </div>
+</div>
 
-    <script>
-        // ⚠️ THAY ĐƯỜNG LINK APPS SCRIPT CỦA BẠN VÀO GIỮA HAI DẤU NHÁY DƯỚI ĐÂY
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx17rOPNEsIUQ9PPri-AWcNiT9avYqpyRjcDfowI2juVbRN4zE8T1wQci9erwomNUFY7g/exec";
+<script>
+    // ⚠️ ĐƯỜNG LINK APPS SCRIPT
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx17rOPNEsIUQ9PPri-AWcNiT9avYqpyRjcDfowI2juVbRN4zE8T1wQci9erwomNUFY7g/exec";
 
-        let dateInventory = JSON.parse(localStorage.getItem('date_inventory_return')) || [];
-        let masterData = []; 
-        let html5QrcodeScanner = null;
-        let sortDirection = null;
-        let currentReturnPolicy = "-"; 
+    // Thư viện nặng chỉ tải khi cần (không chặn lúc mở trang)
+    const XLSX_URL = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+    const EXCELJS_URL = 'https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js';
+    const QR_URL = 'https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js';
 
-        if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-            document.documentElement.classList.add('dark');
-        } else {
-            document.documentElement.classList.remove('dark');
+    const LS_KEY = 'date_inventory_return';
+    const $ = id => document.getElementById(id);
+
+    const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+    const esc_ = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ESC[c]);
+
+    function loadInventory_() {
+        try { const v = JSON.parse(localStorage.getItem(LS_KEY)); return Array.isArray(v) ? v : []; }
+        catch (e) { return []; }
+    }
+    function saveInventory_() {
+        try { localStorage.setItem(LS_KEY, JSON.stringify(dateInventory)); } catch (e) {}
+    }
+
+    let dateInventory = loadInventory_();
+    let masterData = [];
+    let bcMap = new Map();
+    let nameMap = new Map();
+    let html5QrcodeScanner = null;
+    let sortDirection = null;
+    let currentReturnPolicy = "-";
+
+    /* ---------- Tải thư viện theo yêu cầu ---------- */
+    const scriptPromises = {};
+    function loadScript_(src, globalName) {
+        if (globalName && window[globalName]) return Promise.resolve();
+        if (!scriptPromises[src]) {
+            scriptPromises[src] = new Promise((resolve, reject) => {
+                const s = document.createElement('script');
+                s.src = src;
+                s.onload = resolve;
+                s.onerror = () => { delete scriptPromises[src]; reject(new Error('Không tải được thư viện, kiểm tra mạng rồi thử lại.')); };
+                document.head.appendChild(s);
+            });
         }
+        return scriptPromises[src];
+    }
 
-        function toggleTheme() {
-            if (document.documentElement.classList.contains('dark')) {
-                document.documentElement.classList.remove('dark');
-                localStorage.setItem('theme', 'light');
-            } else {
-                document.documentElement.classList.add('dark');
-                localStorage.setItem('theme', 'dark');
-            }
-            updateThemeButton();
-        }
+    async function postJSON_(payload) {
+        const res = await fetch(SCRIPT_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify(payload)
+        });
+        return JSON.parse(await res.text());
+    }
 
-        function updateThemeButton() {
-            const btn = document.getElementById('themeToggleBtn');
-            if (document.documentElement.classList.contains('dark')) {
-                btn.innerHTML = '☀️ Chế độ sáng';
-            } else {
-                btn.innerHTML = '🌙 Chế độ tối';
-            }
-        }
+    /* ---------- Chế độ sáng / tối ---------- */
+    function updateThemeButton() {
+        $('themeToggleBtn').textContent = document.documentElement.classList.contains('dark') ? '☀️ Chế độ sáng' : '🌙 Chế độ tối';
+    }
+    function toggleTheme() {
+        const dark = document.documentElement.classList.toggle('dark');
+        try { localStorage.setItem('theme', dark ? 'dark' : 'light'); } catch (e) {}
         updateThemeButton();
+    }
+    updateThemeButton();
 
-        window.addEventListener('beforeprint', () => {
-            if (document.documentElement.classList.contains('dark')) {
-                document.documentElement.classList.remove('dark');
-                document.documentElement.dataset.wasDark = "true";
-            }
+    /* ---------- Điều hướng: Trang chủ / Kiểm date / Báo cáo ---------- */
+    function go(view) { location.hash = (view === 'home') ? '' : view; }
+
+    function applyView() {
+        const h = (location.hash || '').replace('#', '');
+        const view = (h === 'check' || h === 'report') ? h : 'home';
+        ['home', 'check', 'report'].forEach(v => $('view-' + v).classList.toggle('hidden', v !== view));
+        $('homeBtn').classList.toggle('hidden', view === 'home');
+        if (view !== 'check') stopCamera();
+        if (view === 'check') loadScript_(QR_URL, 'Html5Qrcode').catch(() => {});
+        if (view === 'report') loadReport();
+        window.scrollTo(0, 0);
+    }
+    window.addEventListener('hashchange', applyView);
+
+    /* ---------- In ấn: co giãn vừa 1 trang A4 ngang ---------- */
+    window.addEventListener('beforeprint', () => {
+        if (document.documentElement.classList.contains('dark')) {
+            document.documentElement.classList.remove('dark');
+            document.documentElement.dataset.wasDark = "true";
+        }
+        const container = document.querySelector('.view:not(.hidden) .print-table-container');
+        if (!container) return;
+        container.style.transform = '';
+        container.style.width = '';
+        const pxPerMM = 96 / 25.4;
+        const usableH = (210 - 16) * pxPerMM, usableW = (297 - 16) * pxPerMM;
+        let scale = 1;
+        if (container.scrollHeight > usableH) scale = Math.min(scale, usableH / container.scrollHeight);
+        if (container.scrollWidth > usableW) scale = Math.min(scale, usableW / container.scrollWidth);
+        if (scale < 1) {
+            container.style.transform = `scale(${scale})`;
+            container.style.width = `${100 / scale}%`;
+        }
+    });
+    window.addEventListener('afterprint', () => {
+        if (document.documentElement.dataset.wasDark === "true") {
+            document.documentElement.classList.add('dark');
+            delete document.documentElement.dataset.wasDark;
+        }
+        document.querySelectorAll('.print-table-container').forEach(c => { c.style.transform = ''; c.style.width = ''; });
+    });
+
+    /* ---------- Âm thanh (dùng lại 1 AudioContext duy nhất) ---------- */
+    let audioCtx = null;
+    function playBeep(type = 'success') {
+        try {
+            audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const cfg = { scan: [1000, 0.15, 0.08], success: [1300, 0.12, 0.15], error: [400, 0.2, 0.3] }[type] || [1300, 0.12, 0.15];
+            const t = audioCtx.currentTime;
+            const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(cfg[0], t);
+            gain.gain.setValueAtTime(cfg[1], t);
+            gain.gain.exponentialRampToValueAtTime(0.01, t + cfg[2]);
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.start(t); osc.stop(t + cfg[2]);
+        } catch (e) {}
+    }
+
+    /* ---------- Chuẩn hoá dữ liệu danh mục ---------- */
+    function normalizeKeyLoose_(k) {
+        return String(k || "").trim().toLowerCase()
+            .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+            .replace(/đ/g, "d").replace(/[^a-z0-9]/g, "");
+    }
+    function pickAny_(obj, keys) {
+        for (const k of keys) {
+            if (obj[k] !== undefined && obj[k] !== null && String(obj[k]).trim() !== "") return String(obj[k]).trim();
+        }
+        const normMap = {};
+        Object.keys(obj).forEach(k => { normMap[normalizeKeyLoose_(k)] = k; });
+        for (const k of keys) {
+            const real = normMap[normalizeKeyLoose_(k)];
+            if (real !== undefined && obj[real] !== undefined && obj[real] !== null && String(obj[real]).trim() !== "") return String(obj[real]).trim();
+        }
+        return "";
+    }
+    function normalizeMasterItem_(raw) {
+        raw = raw || {};
+        return {
+            productId: pickAny_(raw, ['productId','ProductId','productID','id','ID','Product ID','Ma San Pham']),
+            barcode: pickAny_(raw, ['barcode','Barcode','baseUpc','BaseUpc','baseUPC','upc','UPC','Base Upc','Ma Vach']),
+            name: pickAny_(raw, ['name','Name','productName','ProductName','shortName','ShortName','Short Name','Ten San Pham']),
+            group: pickAny_(raw, ['group','Group']),
+            category: pickAny_(raw, ['category','Category']),
+            subCategory: pickAny_(raw, ['subCategory','SubCategory','subcategory','Sub Category']),
+            returnPolicy: pickAny_(raw, ['returnPolicy','ReturnPolicy','return_policy','Return Policy','Dieu Kien Doi Tra','Chinh Sach Doi Tra'])
+        };
+    }
+
+    function normText_(s) {
+        return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/\s+/g, ' ').trim();
+    }
+    function normalizeBarcode_(code) { return String(code || "").trim().replace(/[^0-9]/g, ""); }
+
+    // Lập chỉ mục 1 lần để tra cứu barcode / tên gần như tức thời, kể cả danh mục hàng nghìn SP
+    function indexMaster_() {
+        bcMap = new Map(); nameMap = new Map();
+        masterData.forEach(it => {
+            it._n = normText_(it.name);
+            const bc = normalizeBarcode_(it.barcode);
+            if (bc && !bcMap.has(bc)) bcMap.set(bc, it);
+            if (it.name && !nameMap.has(it.name)) nameMap.set(it.name, it);
         });
-
-        window.addEventListener('afterprint', () => {
-            if (document.documentElement.dataset.wasDark === "true") {
-                document.documentElement.classList.add('dark');
-                delete document.documentElement.dataset.wasDark;
-            }
-        });
-
-        // ---------- CO GIÃN BẢNG ĐỂ IN VỪA 1 TRANG A4 DUY NHẤT ----------
-        // Nếu bảng dài hơn 1 trang, tự động scale (transform: scale) toàn bộ
-        // khung bảng lại cho vừa chiều cao khả dụng của 1 trang A4 nằm ngang.
-        window.addEventListener('beforeprint', () => {
-            const container = document.querySelector('.print-table-container');
-            if (!container) return;
-            container.style.transform = '';
-            container.style.width = '';
-            container.style.transformOrigin = 'top left';
-
-            requestAnimationFrame(() => {
-                const pxPerMM = 96 / 25.4;
-                const usableHeightPx = (210 - 16) * pxPerMM; // A4 ngang, trừ margin 8mm x2
-                const usableWidthPx = (297 - 16) * pxPerMM;
-                const contentHeight = container.scrollHeight;
-                const contentWidth = container.scrollWidth;
-
-                let scale = 1;
-                if (contentHeight > usableHeightPx) scale = Math.min(scale, usableHeightPx / contentHeight);
-                if (contentWidth > usableWidthPx) scale = Math.min(scale, usableWidthPx / contentWidth);
-
-                if (scale < 1) {
-                    container.style.transform = `scale(${scale})`;
-                    container.style.width = `${100 / scale}%`;
-                }
-            });
-        });
-
-        window.addEventListener('afterprint', () => {
-            const container = document.querySelector('.print-table-container');
-            if (container) {
-                container.style.transform = '';
-                container.style.width = '';
-            }
-        });
-
-        function playBeep(type = 'success') {
-            try {
-                const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
-                osc.type = 'sine';
-                if (type === 'scan') {
-                    osc.frequency.setValueAtTime(1000, ctx.currentTime);
-                    gain.gain.setValueAtTime(0.15, ctx.currentTime);
-                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.08);
-                    osc.connect(gain); gain.connect(ctx.destination);
-                    osc.start(); osc.stop(ctx.currentTime + 0.08);
-                } else if (type === 'success') {
-                    osc.frequency.setValueAtTime(1300, ctx.currentTime);
-                    gain.gain.setValueAtTime(0.12, ctx.currentTime);
-                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
-                    osc.connect(gain); gain.connect(ctx.destination);
-                    osc.start(); osc.stop(ctx.currentTime + 0.15);
-                } else if (type === 'error') {
-                    osc.frequency.setValueAtTime(400, ctx.currentTime);
-                    gain.gain.setValueAtTime(0.2, ctx.currentTime);
-                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
-                    osc.connect(gain); gain.connect(ctx.destination);
-                    osc.start(); osc.stop(ctx.currentTime + 0.3);
-                }
-            } catch (e) {}
+    }
+    // UPC-A (12 số) và EAN-13 (13 số, thêm 0 ở đầu) được coi là cùng 1 mã
+    function findByBarcode_(code) {
+        const c = normalizeBarcode_(code);
+        if (!c) return null;
+        return bcMap.get(c) || bcMap.get('0' + c) || (c.charAt(0) === '0' ? bcMap.get(c.slice(1)) : null) || null;
+    }
+    function barcodeEquals_(a, b) {
+        const na = normalizeBarcode_(a), nb = normalizeBarcode_(b);
+        if (!na || !nb) return false;
+        if (na === nb) return true;
+        if (Math.abs(na.length - nb.length) === 1) {
+            const longer = na.length > nb.length ? na : nb, shorter = na.length > nb.length ? nb : na;
+            if (longer.charAt(0) === '0' && longer.slice(1) === shorter) return true;
         }
+        return false;
+    }
 
-        // Chuẩn hoá 1 dòng dữ liệu danh mục lấy về từ Apps Script. Sở dĩ cần hàm này: nếu
-        // backend trả về field bị đặt tên khác (vd "Name"/"ProductName"/"shortName" thay vì
-        // "name", hoặc ô trống hoàn toàn không có key), gán thẳng item.name vào input sẽ ra
-        // giá trị JS "undefined" và hiển thị NGUYÊN CHỮ "undefined" trên màn hình — đúng lỗi
-        // đang gặp. Hàm này thử nhiều tên field phổ biến và luôn trả về chuỗi ("" nếu không
-        // có), không bao giờ trả về undefined.
-        // Chuẩn hoá tên field: bỏ dấu tiếng Việt, bỏ khoảng trắng, hạ chữ thường.
-        // Dùng CHUNG logic này cho cả dữ liệu lấy từ GET (fetchMasterData) lẫn
-        // dữ liệu import Excel, để không bị lệch key kiểu "Base Upc" (có khoảng
-        // trắng, đúng tên cột gốc) không khớp với "baseUpc" (viết liền, không dấu).
-        // ĐÂY LÀ NGUYÊN NHÂN CHÍNH gây lỗi "quét xong không ra tên/mã mới hoàn toàn":
-        // trước đây normalizeMasterItem_ dùng danh sách tên field cứng không có
-        // khoảng trắng, nên nếu Apps Script trả JSON giữ nguyên tên cột gốc
-        // ("Base Upc", "Short Name", "Product ID"...) thì không bao giờ khớp,
-        // khiến barcode/name của TOÀN BỘ masterData luôn rỗng.
-        function normalizeKeyLoose_(k) {
-            return String(k || "")
-                .trim()
-                .toLowerCase()
-                .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-                .replace(/đ/g, "d")
-                .replace(/[^a-z0-9]/g, "");
-        }
-        function pickAny_(obj, keys) {
-            // Vẫn thử khớp chính xác trước (nhanh, giữ tương thích ngược)...
-            for (const k of keys) {
-                if (obj[k] !== undefined && obj[k] !== null && String(obj[k]).trim() !== "") {
-                    return String(obj[k]).trim();
-                }
-            }
-            // ...rồi mới khớp "lỏng" theo tên đã chuẩn hoá (bỏ dấu/khoảng trắng/hoa-thường),
-            // để chịu được key kiểu "Base Upc", "Short Name", "Mã Vạch", v.v.
-            const normMap = {};
-            Object.keys(obj).forEach(k => { normMap[normalizeKeyLoose_(k)] = k; });
-            for (const k of keys) {
-                const realKey = normMap[normalizeKeyLoose_(k)];
-                if (realKey !== undefined && obj[realKey] !== undefined && obj[realKey] !== null && String(obj[realKey]).trim() !== "") {
-                    return String(obj[realKey]).trim();
-                }
-            }
-            return "";
-        }
-        function normalizeMasterItem_(raw) {
-            raw = raw || {};
-            return {
-                productId: pickAny_(raw, ['productId','ProductId','productID','id','ID','Product ID','Ma San Pham']),
-                barcode: pickAny_(raw, ['barcode','Barcode','baseUpc','BaseUpc','baseUPC','upc','UPC','Base Upc','Ma Vach']),
-                name: pickAny_(raw, ['name','Name','productName','ProductName','shortName','ShortName','Short Name','Ten San Pham']),
-                group: pickAny_(raw, ['group','Group']),
-                category: pickAny_(raw, ['category','Category']),
-                subCategory: pickAny_(raw, ['subCategory','SubCategory','subcategory','Sub Category']),
-                returnPolicy: pickAny_(raw, ['returnPolicy','ReturnPolicy','return_policy','Return Policy','Dieu Kien Doi Tra','Chinh Sach Doi Tra'])
-            };
-        }
+    function setSyncChip_(text, cls) {
+        const el = $('syncStatus');
+        el.textContent = text;
+        el.className = 'chip ' + cls;
+    }
 
-        async function fetchMasterData() {
-            const statusEl = document.getElementById('syncStatus');
-            try {
-                const response = await fetch(SCRIPT_URL);
-                if (response.ok) {
-                    const rawData = await response.json();
-                    // Luôn log mẫu dòng đầu tiên để tiện debug tên field thực tế backend trả về
-                    // (mở Console trong trình duyệt, F12, để xem).
-                    console.log('[Danh mục] Mẫu dòng đầu tiên từ server (dùng để kiểm tra tên field):', rawData && rawData[0]);
-                    masterData = (Array.isArray(rawData) ? rawData : []).map(normalizeMasterItem_);
-
-                    // Đếm số sản phẩm bị thiếu tên sau khi chuẩn hoá — nếu số này lớn, nhiều
-                    // khả năng cột "Short Name" trong file Excel gốc bị đặt tên/định dạng khác
-                    // khiến lúc import không đọc được, cần kiểm tra lại file gốc rồi tải lại.
-                    const missingName = masterData.filter(it => it.barcode && !it.name).length;
-
-                    const datalist = document.getElementById('productOptions');
-                    datalist.innerHTML = "";
-                    masterData.forEach(item => {
-                        if (!item.name) return; // không thêm option rỗng vào danh sách gợi ý
-                        let option = document.createElement('option');
-                        option.value = item.name;
-                        datalist.appendChild(option);
-                    });
-
-                    if (missingName > 0) {
-                        statusEl.textContent = `⚠️ Đã tải ${masterData.length} SP (${missingName} thiếu tên!)`;
-                        statusEl.className = "text-xs bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400 px-2 py-0.5 rounded-full font-medium";
-                        console.warn(`[Danh mục] ${missingName} sản phẩm có barcode nhưng KHÔNG có tên sau chuẩn hoá. Kiểm tra lại tên cột trong file Excel gốc hoặc dữ liệu trả về từ Apps Script. Mẫu dòng đầu tiên từ server:`, rawData[0]);
-                    } else {
-                        statusEl.textContent = `✅ Đã tải ${masterData.length} SP`;
-                        statusEl.className = "text-xs bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 px-2 py-0.5 rounded-full font-medium";
-                    }
-                }
-            } catch (err) {
-                console.error(err);
-                statusEl.textContent = "❌ Lỗi tải danh mục";
-                statusEl.className = "text-xs bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400 px-2 py-0.5 rounded-full font-medium";
-            }
-        }
-
-        // ---------- SO KHỚP BARCODE (chịu lỗi định dạng từ camera) ----------
-        // Nguyên nhân chính của lỗi "quét mã đã có sẵn nhưng báo là mã mới hoàn toàn":
-        // khi camera quét mã UPC-A (12 số, phổ biến trên hàng hoá), thư viện quét mã sẽ
-        // TỰ ĐỘNG trả về dưới dạng EAN-13 (13 số) bằng cách thêm số 0 ở đầu (đây là hành vi
-        // chuẩn của engine quét mã vạch, không phải lỗi của web). Nếu database lưu mã gốc
-        // 12 số mà so sánh "===" trực tiếp với mã 13 số vừa quét, sẽ luôn KHÔNG khớp dù là
-        // cùng một sản phẩm => hiển thị nhầm là "mã mới hoàn toàn". Hàm dưới đây chuẩn hoá
-        // và so khớp cả hai trường hợp lệch nhau đúng 1 số 0 ở đầu.
-        function normalizeBarcode_(code) {
-            return String(code || "").trim().replace(/[^0-9]/g, "");
-        }
-        function barcodeEquals_(a, b) {
-            let na = normalizeBarcode_(a), nb = normalizeBarcode_(b);
-            if (!na || !nb) return false;
-            if (na === nb) return true;
-            // Lệch đúng 1 ký tự và phần còn lại giống hệt nhau sau khi bỏ số 0 đầu
-            // => rất có thể là cùng 1 mã bị lệch UPC-A (12 số) / EAN-13 (13 số).
-            if (Math.abs(na.length - nb.length) === 1) {
-                let longer = na.length > nb.length ? na : nb;
-                let shorter = na.length > nb.length ? nb : na;
-                if (longer.charAt(0) === '0' && longer.slice(1) === shorter) return true;
-            }
-            return false;
-        }
-
-        document.getElementById('barcode').addEventListener('input', function(e) {
-            let code = e.target.value.trim();
-            let alertBox = document.getElementById('memoryAlert');
-            if (code.length === 0) { alertBox.textContent = ""; return; }
-
-            let matchedMaster = masterData.find(item => barcodeEquals_(item.barcode, code));
-            if (matchedMaster) {
-                // Luôn dùng "" thay vì để lọt giá trị undefined/null vào input (input.value =
-                // undefined sẽ hiển thị nguyên chữ "undefined" trên màn hình).
-                document.getElementById('productName').value = matchedMaster.name || "";
-                currentReturnPolicy = matchedMaster.returnPolicy || "-";
-                document.getElementById('returnPolicyView').textContent = currentReturnPolicy;
-                alertBox.textContent = "📦 Khớp dữ liệu danh mục hệ thống!";
-                alertBox.className = "text-xs mt-1 min-h-[16px] font-medium text-emerald-600 dark:text-emerald-400";
-                playBeep('scan'); 
-                return;
-            }
-
-            let found = [...dateInventory].reverse().find(item => item.barcode !== "" && barcodeEquals_(item.barcode, code));
-            if (found) {
-                document.getElementById('productName').value = found.name || "";
-                currentReturnPolicy = found.returnPolicy || "-";
-                document.getElementById('returnPolicyView').textContent = currentReturnPolicy;
-                alertBox.textContent = "⚡ Tự động lấy tên từ lịch sử ca trực!";
-                alertBox.className = "text-xs mt-1 min-h-[16px] font-medium text-teal-600 dark:text-teal-400";
-                playBeep('scan');
+    async function fetchMasterData() {
+        try {
+            const response = await fetch(SCRIPT_URL);
+            if (!response.ok) throw new Error('HTTP ' + response.status);
+            const rawData = await response.json();
+            if (!Array.isArray(rawData)) throw new Error((rawData && (rawData.error || rawData.message)) || 'Dữ liệu không hợp lệ');
+            masterData = rawData.map(normalizeMasterItem_);
+            indexMaster_();
+            const missingName = masterData.filter(it => it.barcode && !it.name).length;
+            if (missingName > 0) {
+                setSyncChip_(`⚠️ Đã tải ${masterData.length} SP (${missingName} thiếu tên!)`, 'chip-wait');
+                console.warn(`[Danh mục] ${missingName} sản phẩm có barcode nhưng không có tên. Mẫu dòng đầu từ server:`, rawData[0]);
             } else {
-                alertBox.textContent = "🔍 Mã mới hoàn toàn (chưa có dữ liệu)";
-                alertBox.className = "text-xs mt-1 min-h-[16px] font-medium text-zinc-400 dark:text-zinc-500";
-                currentReturnPolicy = "-";
-                document.getElementById('returnPolicyView').textContent = "-";
+                setSyncChip_(`✅ Đã tải ${masterData.length} SP`, 'chip-ok');
             }
+        } catch (err) {
+            console.error(err);
+            setSyncChip_("❌ Lỗi tải danh mục", 'chip-err');
+        }
+    }
+
+    /* ---------- Ô Barcode / Tên sản phẩm ---------- */
+    function setPolicy_(p) {
+        currentReturnPolicy = p || "-";
+        $('returnPolicyView').textContent = currentReturnPolicy;
+    }
+    function setMemoryHint_(text, cls) {
+        const el = $('memoryAlert');
+        el.textContent = text;
+        el.className = 'hint' + (cls ? ' ' + cls : '');
+    }
+
+    $('barcode').addEventListener('input', function (e) {
+        const code = e.target.value.trim();
+        if (!code) { setMemoryHint_(""); return; }
+
+        const m = findByBarcode_(code);
+        if (m) {
+            $('productName').value = m.name || "";
+            setPolicy_(m.returnPolicy);
+            setMemoryHint_("📦 Khớp dữ liệu danh mục hệ thống!", 'ok');
+            playBeep('scan');
+            return;
+        }
+        let found = null;
+        for (let i = dateInventory.length - 1; i >= 0; i--) {
+            if (dateInventory[i].barcode && barcodeEquals_(dateInventory[i].barcode, code)) { found = dateInventory[i]; break; }
+        }
+        if (found) {
+            $('productName').value = found.name || "";
+            setPolicy_(found.returnPolicy);
+            setMemoryHint_("⚡ Tự động lấy tên từ lịch sử ca trực!", 'teal');
+            playBeep('scan');
+        } else {
+            setMemoryHint_("🔍 Mã mới hoàn toàn (chưa có dữ liệu)");
+            setPolicy_("-");
+        }
+    });
+
+    // Gợi ý tên: chỉ hiện tối đa 8 dòng thay vì datalist hàng nghìn dòng
+    let suggestions = [];
+    function hideSuggest_() { $('suggest').classList.add('hidden'); }
+    function showSuggest_(q) {
+        const tokens = normText_(q).split(' ').filter(Boolean);
+        suggestions = [];
+        if (tokens.length) {
+            for (let i = 0; i < masterData.length && suggestions.length < 8; i++) {
+                const it = masterData[i];
+                if (!it.name) continue;
+                let ok = true;
+                for (let j = 0; j < tokens.length; j++) { if (it._n.indexOf(tokens[j]) === -1) { ok = false; break; } }
+                if (ok) suggestions.push(it);
+            }
+        }
+        const ul = $('suggest');
+        if (!suggestions.length) { ul.classList.add('hidden'); return; }
+        ul.innerHTML = suggestions.map((it, i) => `<li data-i="${i}">${esc_(it.name)}</li>`).join('');
+        ul.classList.remove('hidden');
+    }
+    $('suggest').addEventListener('click', function (e) {
+        const li = e.target.closest('li');
+        if (!li) return;
+        const it = suggestions[+li.dataset.i];
+        if (!it) return;
+        $('productName').value = it.name;
+        setPolicy_(it.returnPolicy);
+        if (!$('barcode').value.trim()) $('barcode').value = it.barcode || "";
+        hideSuggest_();
+    });
+    document.addEventListener('click', function (e) {
+        if (!$('suggestWrap').contains(e.target)) hideSuggest_();
+    });
+    $('productName').addEventListener('input', function (e) {
+        const name = e.target.value.trim();
+        const m = nameMap.get(name);
+        if (m) {
+            setPolicy_(m.returnPolicy);
+            if (!$('barcode').value.trim()) $('barcode').value = m.barcode || "";
+            hideSuggest_();
+        } else {
+            setPolicy_("-");
+            showSuggest_(name);
+        }
+    });
+
+    /* ---------- Camera ---------- */
+    function toggleCamera() {
+        const container = $('camera-container');
+        if (container.classList.contains('hidden')) {
+            container.classList.remove('hidden');
+            void container.offsetHeight; // ép reflow đồng bộ: giữ lệnh xin quyền camera nằm trong thao tác bấm (iOS Safari)
+            startCamera();
+        } else {
+            stopCamera();
+        }
+    }
+    function startCamera() {
+        if (typeof Html5Qrcode === 'undefined') {
+            $('camera-container').classList.add('hidden');
+            loadScript_(QR_URL, 'Html5Qrcode').catch(() => {});
+            alert("Thư viện Camera chưa tải xong, vui lòng đợi 1-2 giây rồi bấm lại.");
+            return;
+        }
+        const config = {
+            fps: 15,
+            qrbox: { width: 260, height: 140 },
+            formatsToSupport: [
+                Html5QrcodeSupportedFormats.EAN_13, Html5QrcodeSupportedFormats.EAN_8,
+                Html5QrcodeSupportedFormats.UPC_A, Html5QrcodeSupportedFormats.UPC_E,
+                Html5QrcodeSupportedFormats.CODE_128, Html5QrcodeSupportedFormats.QR_CODE
+            ]
+        };
+        html5QrcodeScanner = new Html5Qrcode("reader");
+        html5QrcodeScanner.start({ facingMode: "environment" }, config, (decodedText) => {
+            const input = $('barcode');
+            input.value = decodedText.trim();
+            input.dispatchEvent(new Event('input'));
+            stopCamera();
+        }, () => {})
+        .catch(err => {
+            console.error(err);
+            const s = String(err);
+            let msg = "Không thể mở Camera.";
+            if (location.protocol !== 'https:' && !['localhost', '127.0.0.1'].includes(location.hostname)) msg = "Cần truy cập trang qua HTTPS thì mới dùng được Camera.";
+            else if (/NotAllowedError|Permission/i.test(s)) msg = "Bạn đã từ chối quyền Camera. Vào Cài đặt > Safari (hoặc trình duyệt) > Camera để cấp quyền cho trang này rồi thử lại.";
+            else if (/NotFoundError/i.test(s)) msg = "Không tìm thấy Camera trên thiết bị này.";
+            else if (/NotReadableError/i.test(s)) msg = "Camera đang được ứng dụng khác sử dụng, hãy đóng ứng dụng đó rồi thử lại.";
+            alert(msg);
+            stopCamera();
         });
+    }
+    function stopCamera() {
+        $('camera-container').classList.add('hidden');
+        const s = html5QrcodeScanner;
+        html5QrcodeScanner = null;
+        if (s) { try { s.stop().then(() => { try { s.clear(); } catch (e) {} }).catch(() => {}); } catch (e) {} }
+    }
 
-        document.getElementById('productName').addEventListener('input', function(e) {
-            let name = e.target.value.trim();
-            let matchedMaster = masterData.find(item => item.name === name);
-            if (matchedMaster) {
-                currentReturnPolicy = matchedMaster.returnPolicy || "-";
-                if (!document.getElementById('barcode').value.trim()) {
-                    document.getElementById('barcode').value = matchedMaster.barcode || "";
-                }
-            } else {
-                currentReturnPolicy = "-";
-            }
-            document.getElementById('returnPolicyView').textContent = currentReturnPolicy;
+    /* ---------- Danh sách chờ gửi ---------- */
+    function calculatePullDate(expiryDateStr, pullType) {
+        if (!expiryDateStr) return "";
+        const exp = new Date(expiryDateStr);
+        const days = { "D-1": 1, "D-3": 3, "D-7": 7, "D-15": 15 }[pullType] || 0;
+        exp.setDate(exp.getDate() - days);
+        return `${String(exp.getDate()).padStart(2, '0')}/${String(exp.getMonth() + 1).padStart(2, '0')}/${exp.getFullYear()}`;
+    }
+    function dmyToTime_(s) {
+        const p = String(s || '').split('/');
+        return p.length === 3 ? new Date(p[2], p[1] - 1, p[0]).getTime() : 0;
+    }
+    function applySort() {
+        if (!sortDirection) return;
+        dateInventory.sort((a, b) => sortDirection === 'asc'
+            ? dmyToTime_(a.pullDate) - dmyToTime_(b.pullDate)
+            : dmyToTime_(b.pullDate) - dmyToTime_(a.pullDate));
+    }
+    function toggleSortPullDate() {
+        sortDirection = (sortDirection === 'asc') ? 'desc' : 'asc';
+        applySort(); renderTable();
+    }
+    function fmtISODate_(s) {
+        const p = String(s || '').split('-');
+        return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : esc_(s);
+    }
+
+    function renderTable() {
+        const n = dateInventory.length;
+        $('sortIcon').textContent = sortDirection === 'asc' ? '▲' : (sortDirection === 'desc' ? '▼' : '↕');
+        const badge = $('homePending');
+        badge.textContent = n;
+        badge.classList.toggle('hidden', n === 0);
+
+        if (!n) { $('dateInventoryList').innerHTML = ""; $('emptyAlert').classList.remove('hidden'); return; }
+        $('emptyAlert').classList.add('hidden');
+
+        $('dateInventoryList').innerHTML = dateInventory.map((it, i) => `
+            <tr>
+                <td class="mono">${esc_(it.barcode) || '---'}</td>
+                <td class="strong">${esc_(it.name)}</td>
+                <td class="c qty">${esc_(it.quantity)}</td>
+                <td>${fmtISODate_(it.expiryDate)}</td>
+                <td class="c pt">${esc_(it.pullType)}</td>
+                <td class="c pd">${esc_(it.pullDate)}</td>
+                <td class="c mono">${esc_(it.timestamp)}</td>
+                <td class="c pol">${esc_(it.returnPolicy) || '-'}</td>
+                <td class="c">${esc_(it.employeeName)}</td>
+                <td class="c no-print"><button class="del" onclick="deleteItem(${i})">✕</button></td>
+            </tr>`).join('');
+    }
+
+    function addItem() {
+        const employeeName = $('employeeName').value.trim();
+        const barcode = $('barcode').value.trim();
+        const name = $('productName').value.trim();
+        const quantity = parseInt($('quantity').value) || 1;
+        const expiryDate = $('expiryDate').value;
+        const pullType = $('pullType').value;
+
+        if (!employeeName) { alert("Vui lòng nhập Tên nhân viên trước!"); return; }
+        if (!name || !expiryDate) { alert("Vui lòng điền tên sản phẩm và chọn ngày hết hạn!"); return; }
+
+        const now = new Date();
+        const p2 = v => String(v).padStart(2, '0');
+        const timestamp = `${p2(now.getDate())}/${p2(now.getMonth() + 1)}/${now.getFullYear()} ${p2(now.getHours())}:${p2(now.getMinutes())}:${p2(now.getSeconds())}`;
+
+        dateInventory.push({
+            barcode, name, quantity, expiryDate, pullType,
+            pullDate: calculatePullDate(expiryDate, pullType),
+            employeeName, timestamp, returnPolicy: currentReturnPolicy
         });
-
-        function toggleCamera() {
-            const container = document.getElementById('camera-container');
-            if (container.classList.contains('hidden')) {
-                container.classList.remove('hidden');
-                // #reader cần có kích thước > 0 trước khi Html5Qrcode.start() đo layout, nếu
-                // không camera có thể không mở được. Đọc offsetHeight ngay sau khi bỏ "hidden"
-                // ép trình duyệt tính lại layout NGAY LẬP TỨC (đồng bộ, cùng tick JS) thay vì
-                // đợi qua requestAnimationFrame. Điều này quan trọng trên iOS Safari: nếu lệnh
-                // xin quyền Camera (getUserMedia) không được gọi đồng bộ trong chính thao tác
-                // bấm nút của người dùng, Safari có thể âm thầm không hiện hộp thoại xin quyền
-                // hoặc từ chối truy cập — đây nhiều khả năng là lý do camera "vẫn không quét
-                // được" dù đã sửa lần trước bằng requestAnimationFrame.
-                void container.offsetHeight; // ép reflow đồng bộ
-                startCamera();
-            } else {
-                stopCamera();
-            }
-        }
-
-        function startCamera() {
-            if (typeof Html5Qrcode === 'undefined') {
-                alert("Thư viện Camera chưa tải xong, vui lòng đợi 1-2 giây rồi bấm lại.");
-                return;
-            }
-            const config = {
-                fps: 15,
-                qrbox: { width: 260, height: 140 },
-                // Thêm UPC_A / UPC_E / CODE_128: nhiều mã hàng thực tế là UPC-A (12 số),
-                // trước đây chỉ khai báo EAN_13/EAN_8 nên engine quét có thể bỏ qua hoặc
-                // ép mã UPC-A thành EAN-13 (thêm số 0 ở đầu) rồi báo không khớp dữ liệu.
-                formatsToSupport: [
-                    Html5QrcodeSupportedFormats.EAN_13,
-                    Html5QrcodeSupportedFormats.EAN_8,
-                    Html5QrcodeSupportedFormats.UPC_A,
-                    Html5QrcodeSupportedFormats.UPC_E,
-                    Html5QrcodeSupportedFormats.CODE_128,
-                    Html5QrcodeSupportedFormats.QR_CODE
-                ]
-            };
-            html5QrcodeScanner = new Html5Qrcode("reader");
-            html5QrcodeScanner.start({ facingMode: "environment" }, config, (decodedText) => {
-                let barcodeInput = document.getElementById('barcode');
-                barcodeInput.value = decodedText.trim();
-                barcodeInput.dispatchEvent(new Event('input'));
-                stopCamera();
-            }, (err) => { /* lỗi từng khung hình không tìm thấy mã: bỏ qua, đây là bình thường */ })
-            .catch(err => {
-                console.error(err);
-                const errStr = String(err);
-                let msg = "Không thể mở Camera.";
-                if (location.protocol !== 'https:' && !['localhost','127.0.0.1'].includes(location.hostname)) {
-                    msg = "Cần truy cập trang qua HTTPS thì mới dùng được Camera.";
-                } else if (/NotAllowedError|Permission/i.test(errStr)) {
-                    msg = "Bạn đã từ chối quyền Camera. Vào Cài đặt > Safari (hoặc trình duyệt) > Camera để cấp quyền cho trang này rồi thử lại.";
-                } else if (/NotFoundError/i.test(errStr)) {
-                    msg = "Không tìm thấy Camera trên thiết bị này.";
-                } else if (/NotReadableError/i.test(errStr)) {
-                    msg = "Camera đang được ứng dụng khác sử dụng, hãy đóng ứng dụng đó rồi thử lại.";
-                }
-                alert(msg);
-                stopCamera();
-            });
-        }
-
-        function stopCamera() {
-            const container = document.getElementById('camera-container');
-            if (container) container.classList.add('hidden');
-            if (html5QrcodeScanner) { html5QrcodeScanner.stop().then(() => { html5QrcodeScanner = null; }); }
-        }
-
-        function calculatePullDate(expiryDateStr, pullType) {
-            if(!expiryDateStr) return "";
-            let expDate = new Date(expiryDateStr);
-            let daysToSubtract = 0;
-            if (pullType === "D-1") daysToSubtract = 1;
-            else if (pullType === "D-3") daysToSubtract = 3;
-            else if (pullType === "D-7") daysToSubtract = 7;
-            else if (pullType === "D-15") daysToSubtract = 15;
-
-            expDate.setDate(expDate.getDate() - daysToSubtract);
-            let d = String(expDate.getDate()).padStart(2, '0');
-            let m = String(expDate.getMonth() + 1).padStart(2, '0');
-            let y = expDate.getFullYear();
-            return `${d}/${m}/${y}`;
-        }
-
-        function applySort() {
-            if (!sortDirection) return;
-            dateInventory.sort((a, b) => {
-                let pA = a.pullDate.split('/'); let pB = b.pullDate.split('/');
-                let dA = new Date(pA[2], pA[1] - 1, pA[0]); let dB = new Date(pB[2], pB[1] - 1, pB[0]);
-                return sortDirection === 'asc' ? dA - dB : dB - dA;
-            });
-        }
-
-        function toggleSortPullDate() {
-            sortDirection = (sortDirection === 'asc') ? 'desc' : 'asc';
-            applySort(); renderTable();
-        }
-
-        function renderTable() {
-            let tbody = document.getElementById('dateInventoryList');
-            let emptyAlert = document.getElementById('emptyAlert');
-            tbody.innerHTML = "";
-            
-            const sortIconEl = document.getElementById('sortIcon');
-            if (sortIconEl) { sortIconEl.textContent = sortDirection === 'asc' ? ' ▲' : (sortDirection === 'desc' ? ' ▼' : ' ↕'); }
-
-            if(dateInventory.length === 0) { emptyAlert.classList.remove('hidden'); return; }
-            emptyAlert.classList.add('hidden');
-
-            dateInventory.forEach((item, index) => {
-                let expParts = item.expiryDate.split('-');
-                let formattedExp = `${expParts[2]}/${expParts[1]}/${expParts[0]}`;
-
-                tbody.innerHTML += `
-                    <tr class="border-b border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-700/40 transition">
-                        <td class="p-3 font-mono text-xs text-zinc-500 dark:text-zinc-400">${item.barcode || '---'}</td>
-                        <td class="p-3 font-medium text-zinc-800 dark:text-zinc-200">${item.name}</td>
-                        <td class="p-3 text-center font-bold text-zinc-700 dark:text-zinc-300 bg-zinc-50 dark:bg-zinc-900/40 print:bg-white">${item.quantity}</td>
-                        <td class="p-3 font-medium text-zinc-600 dark:text-zinc-300">${formattedExp}</td>
-                        <td class="p-3 text-center font-bold text-sevGreen-700 dark:text-emerald-400 bg-emerald-50/50 dark:bg-zinc-900 print:bg-white">${item.pullType}</td>
-                        <td class="p-3 text-center font-bold text-sevOrange-600 dark:text-sevOrange-500 bg-orange-50/60 dark:bg-orange-950/20 print:bg-white">${item.pullDate}</td>
-                        <td class="p-3 text-center font-mono text-xs text-zinc-600 dark:text-zinc-400 bg-zinc-50/50 dark:bg-zinc-900 print:bg-white">${item.timestamp}</td>
-                        <td class="p-3 text-center font-semibold text-teal-800 dark:text-teal-400 bg-teal-50/20 dark:bg-teal-950/20 print:bg-white">${item.returnPolicy || '-'}</td>
-                        <td class="p-3 text-center font-medium text-zinc-700 dark:text-zinc-300">${item.employeeName}</td>
-                        <td class="p-3 text-center no-print"><button onclick="deleteItem(${index})" class="text-rose-500 hover:text-rose-700 font-bold">✕</button></td>
-                    </tr>`;
-            });
-        }
-
-        function addItem() {
-            let employeeName = document.getElementById('employeeName').value.trim();
-            let barcode = document.getElementById('barcode').value.trim();
-            let name = document.getElementById('productName').value.trim();
-            let quantity = parseInt(document.getElementById('quantity').value) || 1;
-            let expiryDate = document.getElementById('expiryDate').value;
-            let pullType = document.getElementById('pullType').value;
-
-            if(!employeeName) { alert("Vui lòng nhập Tên nhân viên trước!"); return; }
-            if(!name || !expiryDate) { alert("Vui lòng điền tên sản phẩm và chọn ngày hết hạn!"); return; }
-
-            let now = new Date();
-            let d = String(now.getDate()).padStart(2, '0');
-            let m = String(now.getMonth() + 1).padStart(2, '0');
-            let y = now.getFullYear();
-            let timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
-            let timestamp = `${d}/${m}/${y} ${timeStr}`;
-
-            let pullDate = calculatePullDate(expiryDate, pullType);
-            let itemData = { barcode, name, quantity, expiryDate, pullType, pullDate, employeeName, timestamp, returnPolicy: currentReturnPolicy };
-            
-            dateInventory.push(itemData);
-            applySort();
-
-            localStorage.setItem('date_inventory_return', JSON.stringify(dateInventory));
-            renderTable();
-            playBeep('success');
-
-            document.getElementById('barcode').value = "";
-            document.getElementById('productName').value = "";
-            document.getElementById('quantity').value = "1";
-            document.getElementById('expiryDate').value = "";
-            document.getElementById('memoryAlert').textContent = "";
-            currentReturnPolicy = "-";
-            document.getElementById('returnPolicyView').textContent = "-";
-
-            // Đưa con trỏ quay lại ô Mã Barcode để tiếp tục quét/nhập mã tiếp theo
-            document.getElementById('barcode').focus();
-        }
-
-        function deleteItem(index) {
-            dateInventory.splice(index, 1);
-            localStorage.setItem('date_inventory_return', JSON.stringify(dateInventory));
-            renderTable();
-        }
-
-        function clearAllData() {
-            if (dateInventory.length === 0) {
-                alert("Bảng dữ liệu đã trống sẵn rồi!");
-                return;
-            }
-            if (confirm("⚠️ BẠN CÓ CHẮC CHẮN MUỐN XÓA TẤT CẢ DỮ LIỆU ĐÃ QUÉT?\nHành động này không thể hoàn tác nếu chưa gửi lên Sheet hoặc xuất Excel!")) {
-                dateInventory = [];
-                localStorage.removeItem('date_inventory_return');
-                renderTable();
-                playBeep('error');
-                alert("🧹 Đã xóa sạch dữ liệu tạm thời!");
-            }
-        }
-
-        async function submitDataToSheet() {
-            if (dateInventory.length === 0) {
-                alert("Không có dữ liệu nào trong bảng tạm để gửi!");
-                return;
-            }
-
-            const btn = document.getElementById('btnSubmitSheet');
-            if (!confirm(`Bạn muốn đồng bộ toàn bộ ${dateInventory.length} dòng dữ liệu này lên hệ thống và chốt ca chứ?`)) return;
-
-            btn.disabled = true;
-            btn.innerHTML = "⏳ Đang gửi dữ liệu...";
-            btn.classList.add('opacity-50', 'cursor-not-allowed');
-
-            try {
-                const response = await fetch(SCRIPT_URL, {
-                    method: 'POST',
-                    mode: 'cors',
-                    redirect: 'follow',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' }, 
-                    body: JSON.stringify({ action: "sync_batch", data: dateInventory })
-                });
-
-                const resText = await response.text();
-                const resJson = JSON.parse(resText);
-
-                if (resJson.status === "success") {
-                    alert(`🚀 Đồng bộ thành công! ${resJson.message}`);
-                    dateInventory = [];
-                    localStorage.removeItem('date_inventory_return');
-                    renderTable();
-                    playBeep('success');
-                } else {
-                    alert("❌ Lỗi từ hệ thống Sheet: " + resJson.message);
-                }
-
-            } catch (err) {
-                console.error(err);
-                alert("❌ Lỗi kết nối! Bạn hãy kiểm tra lại cấu hình Deploy trên Apps Script đã ở chế độ 'Anyone' chưa, hoặc kiểm tra lại đường dẫn SCRIPT_URL.");
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = "🚀 Gửi & Chốt Ca";
-                btn.classList.remove('opacity-50', 'cursor-not-allowed');
-            }
-        }
-
-        async function exportToExcel() {
-            if(dateInventory.length === 0) { alert("Không có dữ liệu để xuất file!"); return; }
-
-            const workbook = new ExcelJS.Workbook();
-            const worksheet = workbook.addWorksheet("Bao_Cao_Date");
-
-            worksheet.columns = [
-                { header: "Mã Barcode", key: "barcode", width: 18 },
-                { header: "Tên Sản Phẩm", key: "name", width: 35 },
-                { header: "Số Lượng", key: "quantity", width: 10 },
-                { header: "Ngày Hết Hạn", key: "expiryDate", width: 16 },
-                { header: "Quy Định Rút", key: "pullType", width: 15 },
-                { header: "Ngày Phải Rút", key: "pullDate", width: 18 },
-                { header: "Ngày Giờ Quét", key: "timestamp", width: 22 },
-                { header: "Điều Kiện Đổi Trả (NCC)", key: "returnPolicy", width: 22 },
-                { header: "Nhân Viên Kiểm", key: "employeeName", width: 18 }
-            ];
-
-            dateInventory.forEach(item => {
-                let expParts = item.expiryDate.split('-');
-                worksheet.addRow({
-                    barcode: item.barcode || "---",
-                    name: item.name,
-                    quantity: item.quantity,
-                    expiryDate: `${expParts[2]}/${expParts[1]}/${expParts[0]}`,
-                    pullType: item.pullType,
-                    pullDate: item.pullDate,
-                    timestamp: item.timestamp,
-                    returnPolicy: item.returnPolicy || "-",
-                    employeeName: item.employeeName
-                });
-            });
-
-            const headerRow = worksheet.getRow(1);
-            headerRow.height = 30;
-            headerRow.eachCell((cell) => {
-                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF00843D' } }; 
-                cell.font = { name: 'Segoe UI', color: { argb: 'FFFFFFFF' }, bold: true, size: 11 };
-                cell.alignment = { vertical: 'middle', horizontal: 'center' };
-                cell.border = { bottom: { style: 'medium', color: { argb: 'FFEE2E24' } } }; 
-            });
-
-            worksheet.eachRow((row, rowNumber) => {
-                if (rowNumber === 1) return;
-                row.height = 24;
-
-                row.eachCell((cell) => {
-                    cell.font = { name: 'Segoe UI', size: 10 };
-                    cell.alignment = { vertical: 'middle' };
-                    cell.border = {
-                        bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
-                        right: { style: 'thin', color: { argb: 'FFE2E8F0' } }
-                    };
-                });
-
-                row.getCell('barcode').alignment = { vertical: 'middle', horizontal: 'center' };
-                row.getCell('quantity').alignment = { vertical: 'middle', horizontal: 'center' };
-                row.getCell('expiryDate').alignment = { vertical: 'middle', horizontal: 'center' };
-                row.getCell('pullType').alignment = { vertical: 'middle', horizontal: 'center' };
-                row.getCell('pullDate').alignment = { vertical: 'middle', horizontal: 'center' };
-                row.getCell('timestamp').alignment = { vertical: 'middle', horizontal: 'center' };
-                row.getCell('returnPolicy').alignment = { vertical: 'middle', horizontal: 'center' };
-                row.getCell('employeeName').alignment = { vertical: 'middle', horizontal: 'center' };
-
-                row.getCell('quantity').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF4F4F5' } };
-                
-                row.getCell('pullType').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDCFCE7' } };
-                row.getCell('pullType').font = { name: 'Segoe UI', bold: true, color: { argb: 'FF00843D' } };
-
-                row.getCell('pullDate').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFE4E1' } }; 
-                row.getCell('pullDate').font = { name: 'Segoe UI', bold: true, color: { argb: 'FFD62219' } };
-
-                row.getCell('returnPolicy').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCCFBF1' } };
-                row.getCell('returnPolicy').font = { name: 'Segoe UI', bold: true, color: { argb: 'FF0F766E' } };
-            });
-
-            const buffer = await workbook.xlsx.writeBuffer();
-            const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-            const link = document.createElement("a");
-            link.href = URL.createObjectURL(blob);
-            link.download = `Bao_Cao_Date_7Eleven_${new Date().toISOString().slice(0,10)}.xlsx`;
-            link.click();
-            URL.revokeObjectURL(link.href);
-        }
-
+        applySort();
+        saveInventory_();
         renderTable();
-        fetchMasterData();
+        playBeep('success');
 
-        // ---------- MODAL CÀI ĐẶT ----------
-        function openSettings() {
-            document.getElementById('settingsOverlay').classList.remove('hidden');
-        }
-        function closeSettings() {
-            document.getElementById('settingsOverlay').classList.add('hidden');
-        }
-        document.getElementById('settingsOverlay').addEventListener('click', function(e) {
-            if (e.target === this) closeSettings();
-        });
+        $('barcode').value = "";
+        $('productName').value = "";
+        $('quantity').value = "1";
+        $('expiryDate').value = "";
+        setMemoryHint_("");
+        setPolicy_("-");
+        hideSuggest_();
+        $('barcode').focus();
+    }
 
-        // ---------- CẬP NHẬT DATABASE TỪ FILE EXCEL ----------
-        function normalizeKey_(k) {
-            return String(k || "")
-                .trim()
-                .toLowerCase()
-                .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // bỏ dấu tiếng Việt (vd "Tên" -> "ten")
-                .replace(/đ/g, "d")
-                .replace(/[^a-z0-9]/g, "");
-        }
+    function deleteItem(index) {
+        dateInventory.splice(index, 1);
+        saveInventory_();
+        renderTable();
+    }
 
-        function pickField_(row, normMap, candidates) {
-            for (const c of candidates) {
-                const key = normMap[c];
-                if (key !== undefined && row[key] !== undefined && row[key] !== null && String(row[key]).trim() !== "") {
-                    return String(row[key]).trim();
-                }
+    function clearAllData() {
+        if (!dateInventory.length) { alert("Bảng dữ liệu đã trống sẵn rồi!"); return; }
+        if (confirm("⚠️ BẠN CÓ CHẮC CHẮN MUỐN XÓA TẤT CẢ DỮ LIỆU ĐÃ QUÉT?\nHành động này không thể hoàn tác nếu chưa gửi lên Sheet hoặc xuất Excel!")) {
+            dateInventory = [];
+            try { localStorage.removeItem(LS_KEY); } catch (e) {}
+            renderTable();
+            playBeep('error');
+            alert("🧹 Đã xóa sạch dữ liệu tạm thời!");
+        }
+    }
+
+    async function submitDataToSheet() {
+        if (!dateInventory.length) { alert("Không có dữ liệu nào trong bảng tạm để gửi!"); return; }
+        if (!confirm(`Bạn muốn đồng bộ toàn bộ ${dateInventory.length} dòng dữ liệu này lên hệ thống và chốt ca chứ?`)) return;
+
+        const btn = $('btnSubmitSheet');
+        btn.disabled = true;
+        btn.textContent = "⏳ Đang gửi dữ liệu...";
+        try {
+            const res = await postJSON_({ action: "sync_batch", data: dateInventory });
+            if (res.status === "success") {
+                alert(`🚀 Đồng bộ thành công! ${res.message || ''}`);
+                dateInventory = [];
+                try { localStorage.removeItem(LS_KEY); } catch (e) {}
+                renderTable();
+                playBeep('success');
+            } else {
+                alert("❌ Lỗi từ hệ thống Sheet: " + (res.message || res.error || 'không rõ'));
             }
-            return "";
+        } catch (err) {
+            console.error(err);
+            alert("❌ Lỗi kết nối! Bạn hãy kiểm tra lại cấu hình Deploy trên Apps Script đã ở chế độ 'Anyone' chưa, hoặc kiểm tra lại đường dẫn SCRIPT_URL.");
+        } finally {
+            btn.disabled = false;
+            btn.textContent = "🚀 Gửi & Chốt Ca";
         }
+    }
 
-        function showImportProgress(msg, type) {
-            const el = document.getElementById('importProgress');
-            el.textContent = msg;
-            el.className = 'mt-3 text-xs font-semibold text-center py-2 rounded-lg ' +
-                (type === 'success' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400'
-                : type === 'error' ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-400'
-                : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-400');
-        }
+    /* ---------- Xuất Excel (tải thư viện khi bấm) ---------- */
+    async function exportToExcel() {
+        if (!dateInventory.length) { alert("Không có dữ liệu để xuất file!"); return; }
+        try { await loadScript_(EXCELJS_URL, 'ExcelJS'); } catch (e) { alert(e.message); return; }
 
-        document.getElementById('importFileInput').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-
-            const btn = document.getElementById('btnImport');
-            btn.disabled = true;
-            showImportProgress("⏳ Đang đọc file Excel...", "info");
-
-            const reader = new FileReader();
-            reader.onload = function(evt) {
-                try {
-                    const wb = XLSX.read(evt.target.result, { type: "array" });
-                    const ws = wb.Sheets[wb.SheetNames[0]];
-                    const rawRows = XLSX.utils.sheet_to_json(ws, { defval: "", raw: false });
-
-                    if (!rawRows.length) {
-                        showImportProgress("❌ File không có dữ liệu.", "error");
-                        btn.disabled = false;
-                        return;
-                    }
-
-                    const normMap = {};
-                    Object.keys(rawRows[0]).forEach(k => { normMap[normalizeKey_(k)] = k; });
-
-                    const mapped = rawRows.map(row => ({
-                        productId: pickField_(row, normMap, ["productid", "id", "masp", "masanpham"]),
-                        barcode: pickField_(row, normMap, ["baseupc", "upc", "barcode", "mavach", "mavachbarcode"]),
-                        name: pickField_(row, normMap, ["shortname", "name", "productname", "tensanpham", "tensp"]),
-                        group: pickField_(row, normMap, ["group", "nhom"]),
-                        category: pickField_(row, normMap, ["category", "loai", "nganhhang"]),
-                        subCategory: pickField_(row, normMap, ["subcategory", "loaicon", "phanloai"])
-                    })).filter(r => r.productId || r.barcode);
-
-                    if (!mapped.length) {
-                        showImportProgress("❌ Không tìm thấy các cột cần thiết trong file (Product ID, Base Upc...).", "error");
-                        btn.disabled = false;
-                        return;
-                    }
-
-                    showImportProgress(`⏳ Đang cập nhật ${mapped.length} sản phẩm lên database...`, "info");
-                    sendImport(mapped, btn);
-                } catch (err) {
-                    console.error(err);
-                    showImportProgress("❌ Lỗi đọc file Excel. Kiểm tra định dạng file.", "error");
-                    btn.disabled = false;
-                }
-            };
-            reader.onerror = function() {
-                showImportProgress("❌ Không thể đọc file.", "error");
-                btn.disabled = false;
-            };
-            reader.readAsArrayBuffer(file);
-            e.target.value = "";
+        const workbook = new ExcelJS.Workbook();
+        const ws = workbook.addWorksheet("Bao_Cao_Date");
+        ws.columns = [
+            { header: "Mã Barcode", key: "barcode", width: 18 },
+            { header: "Tên Sản Phẩm", key: "name", width: 35 },
+            { header: "Số Lượng", key: "quantity", width: 10 },
+            { header: "Ngày Hết Hạn", key: "expiryDate", width: 16 },
+            { header: "Quy Định Rút", key: "pullType", width: 15 },
+            { header: "Ngày Phải Rút", key: "pullDate", width: 18 },
+            { header: "Ngày Giờ Quét", key: "timestamp", width: 22 },
+            { header: "Điều Kiện Đổi Trả (NCC)", key: "returnPolicy", width: 22 },
+            { header: "Nhân Viên Kiểm", key: "employeeName", width: 18 }
+        ];
+        dateInventory.forEach(it => {
+            ws.addRow({
+                barcode: it.barcode || "---", name: it.name, quantity: it.quantity,
+                expiryDate: fmtISODate_(it.expiryDate), pullType: it.pullType, pullDate: it.pullDate,
+                timestamp: it.timestamp, returnPolicy: it.returnPolicy || "-", employeeName: it.employeeName
+            });
         });
 
-        function sendImport(rows, btn) {
-            fetch(SCRIPT_URL, {
-                method: "POST",
-                headers: { "Content-Type": "text/plain;charset=utf-8" },
-                body: JSON.stringify({ action: "import", rows: rows })
-            })
-            .then(res => res.json())
-            .then(res => {
-                btn.disabled = false;
-                if (res && res.success) {
-                    showImportProgress(`✅ Đã thêm mới ${res.added} · cập nhật ${res.updated} sản phẩm.`, "success");
-                    fetchMasterData();
-                } else {
-                    showImportProgress("❌ " + ((res && res.error) || "Cập nhật thất bại."), "error");
-                }
-            })
-            .catch(err => {
-                btn.disabled = false;
-                console.error(err);
-                showImportProgress("❌ Lỗi kết nối máy chủ khi cập nhật.", "error");
+        const headerRow = ws.getRow(1);
+        headerRow.height = 30;
+        headerRow.eachCell(cell => {
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF00843D' } };
+            cell.font = { name: 'Segoe UI', color: { argb: 'FFFFFFFF' }, bold: true, size: 11 };
+            cell.alignment = { vertical: 'middle', horizontal: 'center' };
+            cell.border = { bottom: { style: 'medium', color: { argb: 'FFEE2E24' } } };
+        });
+        ws.eachRow((row, n) => {
+            if (n === 1) return;
+            row.height = 24;
+            row.eachCell(cell => {
+                cell.font = { name: 'Segoe UI', size: 10 };
+                cell.alignment = { vertical: 'middle' };
+                cell.border = { bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } }, right: { style: 'thin', color: { argb: 'FFE2E8F0' } } };
             });
+            ['barcode', 'quantity', 'expiryDate', 'pullType', 'pullDate', 'timestamp', 'returnPolicy', 'employeeName']
+                .forEach(k => { row.getCell(k).alignment = { vertical: 'middle', horizontal: 'center' }; });
+            row.getCell('quantity').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF4F4F5' } };
+            row.getCell('pullType').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDCFCE7' } };
+            row.getCell('pullType').font = { name: 'Segoe UI', bold: true, color: { argb: 'FF00843D' } };
+            row.getCell('pullDate').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFE4E1' } };
+            row.getCell('pullDate').font = { name: 'Segoe UI', bold: true, color: { argb: 'FFD62219' } };
+            row.getCell('returnPolicy').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCCFBF1' } };
+            row.getCell('returnPolicy').font = { name: 'Segoe UI', bold: true, color: { argb: 'FF0F766E' } };
+        });
+
+        const buffer = await workbook.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = `Bao_Cao_Date_7Eleven_${new Date().toISOString().slice(0, 10)}.xlsx`;
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+    }
+
+    /* ---------- BÁO CÁO KIỂM DATE (dữ liệu lấy từ backend) ---------- */
+    let reportRows = [];
+    let reportLoading = false;
+    let reportSortDir = 'asc';
+
+    function setReportStatus_(text, cls) {
+        const el = $('reportStatus');
+        el.textContent = text;
+        el.className = 'chip ' + cls;
+    }
+
+    async function loadReport() {
+        if (reportLoading) return;
+        reportLoading = true;
+        $('btnReportRefresh').disabled = true;
+        setReportStatus_('⏳ Đang tải báo cáo...', 'chip-wait');
+        try {
+            const res = await fetch(SCRIPT_URL + '?action=report');
+            const json = await res.json();
+            if (!json || json.status !== 'success') throw new Error((json && (json.message || json.error)) || 'Lỗi không xác định');
+            reportRows = Array.isArray(json.rows) ? json.rows : [];
+            renderReport();
+            const time = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+            setReportStatus_(`✅ Cập nhật lúc ${time}` + (json.purged ? ` · đã xóa ${json.purged} dòng hết date` : ''), 'chip-ok');
+        } catch (err) {
+            console.error(err);
+            setReportStatus_('❌ Không tải được báo cáo: ' + err.message, 'chip-err');
+        } finally {
+            reportLoading = false;
+            $('btnReportRefresh').disabled = false;
         }
-    </script>
+    }
+
+    function resetReportFilter() {
+        $('reportFilter').value = 'all';
+        $('reportDate').value = '';
+        renderReport();
+    }
+    function toggleReportSort() {
+        reportSortDir = (reportSortDir === 'asc') ? 'desc' : 'asc';
+        renderReport();
+    }
+
+    function renderReport() {
+        const sel = $('reportFilter').value, day = $('reportDate').value;
+        let rows = reportRows.filter(r => {
+            if (day) return r.pullISO === day;
+            if (r.pullDaysLeft == null) return sel === 'all';
+            if (sel === 'due') return r.pullDaysLeft <= 0;
+            if (sel === '3') return r.pullDaysLeft <= 3;
+            if (sel === '7') return r.pullDaysLeft <= 7;
+            return true;
+        });
+
+        const dir = reportSortDir === 'asc' ? 1 : -1;
+        rows = rows.slice().sort((a, b) =>
+            dir * (a.pullISO || '9999').localeCompare(b.pullISO || '9999') ||
+            (a.expiryISO || '9999').localeCompare(b.expiryISO || '9999'));
+        $('reportSortIcon').textContent = reportSortDir === 'asc' ? '▲' : '▼';
+
+        const dueCount = rows.filter(r => r.pullDaysLeft != null && r.pullDaysLeft <= 0).length;
+        $('reportSummary').textContent = `Hiển thị ${rows.length}/${reportRows.length} dòng · ${dueCount} dòng đã đến hạn rút`;
+        $('reportEmpty').classList.toggle('hidden', rows.length > 0);
+
+        $('reportList').innerHTML = rows.map(r => {
+            const d = r.daysLeft;
+            let cdText = '-', cdCls = 'cd-na';
+            if (d != null) {
+                cdText = d <= 0 ? 'Hết date hôm nay' : `Còn ${d} ngày`;
+                cdCls = d <= 1 ? 'cd-red' : (d <= 3 ? 'cd-orange' : 'cd-green');
+            }
+            const due = (r.pullDaysLeft != null && r.pullDaysLeft <= 0) ? ' class="due"' : '';
+            return `
+            <tr${due}>
+                <td class="mono">${esc_(r.barcode) || '---'}</td>
+                <td class="strong">${esc_(r.name)}</td>
+                <td class="c qty">${esc_(r.quantity)}</td>
+                <td>${esc_(r.expiryDate)}</td>
+                <td class="c pt">${esc_(r.pullType)}</td>
+                <td class="c pd">${esc_(r.pullDate)}</td>
+                <td class="c mono">${esc_(r.scannedAt)}</td>
+                <td class="c pol">${esc_(r.returnPolicy) || '-'}</td>
+                <td class="c">${esc_(r.employeeName)}</td>
+                <td class="c"><span class="cd ${cdCls}">${cdText}</span></td>
+            </tr>`;
+        }).join('');
+    }
+
+    /* ---------- CÀI ĐẶT + UPLOAD EXCEL ---------- */
+    function openSettings() { $('settingsOverlay').classList.remove('hidden'); }
+    function closeSettings() { $('settingsOverlay').classList.add('hidden'); }
+    $('settingsOverlay').addEventListener('click', function (e) { if (e.target === this) closeSettings(); });
+
+    function showProgress_(id, msg, type) {
+        const el = $(id);
+        el.textContent = msg;
+        el.className = 'progress progress-' + type;
+    }
+
+    function readFirstSheetRows_(file) {
+        return new Promise((resolve, reject) => {
+            const fr = new FileReader();
+            fr.onerror = () => reject(new Error('Không thể đọc file.'));
+            fr.onload = async () => {
+                try {
+                    await loadScript_(XLSX_URL, 'XLSX');
+                    const wb = XLSX.read(fr.result, { type: 'array' });
+                    const ws = wb.Sheets[wb.SheetNames[0]];
+                    resolve(XLSX.utils.sheet_to_json(ws, { defval: "", raw: false }));
+                } catch (e) { reject(e.message && !/XLSX/.test(e.message) ? e : new Error('Lỗi đọc file Excel. Kiểm tra định dạng file.')); }
+            };
+            fr.readAsArrayBuffer(file);
+        });
+    }
+    function buildNormMap_(row) {
+        const m = {};
+        Object.keys(row).forEach(k => { m[normalizeKeyLoose_(k)] = k; });
+        return m;
+    }
+    function pickField_(row, normMap, candidates) {
+        for (const c of candidates) {
+            const key = normMap[c];
+            if (key !== undefined && row[key] !== undefined && row[key] !== null && String(row[key]).trim() !== "") return String(row[key]).trim();
+        }
+        return "";
+    }
+
+    // Upload database sản phẩm
+    $('importFileInput').addEventListener('change', async function (e) {
+        const file = e.target.files[0];
+        e.target.value = "";
+        if (!file) return;
+        const btn = $('btnImport');
+        btn.disabled = true;
+        showProgress_('importProgress', "⏳ Đang đọc file Excel...", "info");
+        try {
+            const raw = await readFirstSheetRows_(file);
+            if (!raw.length) throw new Error("File không có dữ liệu.");
+            const nm = buildNormMap_(raw[0]);
+            const mapped = raw.map(row => ({
+                productId: pickField_(row, nm, ["productid", "id", "masp", "masanpham"]),
+                barcode: pickField_(row, nm, ["baseupc", "upc", "barcode", "mavach", "mavachbarcode"]),
+                name: pickField_(row, nm, ["shortname", "name", "productname", "tensanpham", "tensp"]),
+                group: pickField_(row, nm, ["group", "nhom"]),
+                category: pickField_(row, nm, ["category", "loai", "nganhhang"]),
+                subCategory: pickField_(row, nm, ["subcategory", "loaicon", "phanloai"])
+            })).filter(r => r.productId || r.barcode);
+            if (!mapped.length) throw new Error("Không tìm thấy các cột cần thiết trong file (Product ID, Base Upc...).");
+
+            showProgress_('importProgress', `⏳ Đang cập nhật ${mapped.length} sản phẩm lên database...`, "info");
+            const res = await postJSON_({ action: "import", rows: mapped });
+            if (!(res && res.success)) throw new Error((res && (res.error || res.message)) || "Cập nhật thất bại.");
+            showProgress_('importProgress', `✅ Đã thêm mới ${res.added} · cập nhật ${res.updated} sản phẩm.`, "success");
+            fetchMasterData();
+        } catch (err) {
+            console.error(err);
+            showProgress_('importProgress', "❌ " + err.message, "error");
+        } finally {
+            btn.disabled = false;
+        }
+    });
+
+    // Upload Return Policy (cột Product Name + Requirement)
+    $('policyFileInput').addEventListener('change', async function (e) {
+        const file = e.target.files[0];
+        e.target.value = "";
+        if (!file) return;
+        const btn = $('btnPolicy');
+        btn.disabled = true;
+        showProgress_('policyProgress', "⏳ Đang đọc file Excel...", "info");
+        try {
+            const raw = await readFirstSheetRows_(file);
+            if (!raw.length) throw new Error("File không có dữ liệu.");
+            const nm = buildNormMap_(raw[0]);
+            const mapped = raw.map(row => ({
+                name: pickField_(row, nm, ["productname", "tensanpham", "tensp", "shortname", "name"]),
+                requirement: pickField_(row, nm, ["requirement", "yeucau", "dieukien", "returnpolicy", "chinhsachdoitra"])
+            })).filter(r => r.name && r.requirement);
+            if (!mapped.length) {
+                throw new Error("Không tìm thấy dữ liệu ở 2 cột Product Name và Requirement. Các cột đọc được: " + Object.keys(raw[0]).join(", "));
+            }
+
+            showProgress_('policyProgress', `⏳ Đang gửi ${mapped.length} dòng chính sách lên backend...`, "info");
+            const res = await postJSON_({ action: "import_policy", rows: mapped });
+            if (!(res && res.success)) throw new Error((res && (res.error || res.message)) || "Cập nhật thất bại.");
+            let msg = `✅ Đã lưu ${res.total} chính sách (mới ${res.added} · cập nhật ${res.updated})`;
+            if (res.products) msg += ` · khớp ${res.matched}/${res.products} sản phẩm trong danh mục`;
+            showProgress_('policyProgress', msg, "success");
+            fetchMasterData();
+        } catch (err) {
+            console.error(err);
+            showProgress_('policyProgress', "❌ " + err.message, "error");
+        } finally {
+            btn.disabled = false;
+        }
+    });
+
+    /* ---------- KHỞI ĐỘNG ---------- */
+    renderTable();
+    applyView();
+    fetchMasterData();
+    window.addEventListener('load', () => setTimeout(() => loadScript_(QR_URL, 'Html5Qrcode').catch(() => {}), 800));
+</script>
 </body>
 </html>
