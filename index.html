@@ -231,8 +231,8 @@
             .del{ width:44px; height:44px; font-size:18px; }
         }
 
-        /* ============ IN ẤN: vừa 1 trang A4 ngang ============ */
-        @page{ size:A4 landscape; margin:8mm; }
+        /* ============ IN ẤN: A4 đứng (điện thoại Android bỏ qua A4 ngang nên trang bị trống) ============ */
+        @page{ size:A4 portrait; margin:8mm; }
         @media print{
             .no-print, .topbar, button, .suggest, .overlay, .mobile-bar, .toast{ display:none !important; }
             html, body{ background:#fff !important; color:#000 !important; margin:0 !important; padding:0 !important; }
@@ -268,6 +268,13 @@
         body.report-print .table-wrap{ border:none !important; overflow:visible !important; border-radius:0 !important; }
         body.report-print table{ width:100% !important; table-layout:auto; font-size:calc(13px*var(--ps)) !important; }
         body.report-print thead{ display:table-header-group; }
+        body.report-print th{ white-space:normal !important; }
+        body.report-print td:first-child, body.report-print td:nth-child(4), body.report-print td.pd, body.report-print td.pt, body.report-print td.qty{ white-space:nowrap !important; }
+        body.report-print td.mono{ white-space:normal; }
+        body.report-print th.th-policy{ width:25%; }
+        body.report-print thead th:nth-child(2){ width:21%; }
+        body.report-print th.th-cd{ width:11%; }
+        body.report-print th.th-emp{ width:8%; }
         body.report-print tr{ break-inside:avoid; page-break-inside:avoid; }
         body.report-print td, body.report-print th{
             font-size:calc(13px*var(--ps)) !important; line-height:1.2 !important;
@@ -479,6 +486,7 @@
                             <th class="c th-policy">Đổi Trả NCC</th>
                             <th class="c th-emp">Nhân Viên</th>
                             <th class="c th-cd">Đếm Ngược Đến Ngày Rút</th>
+                            <th class="no-print th-del" aria-label="Xóa"></th>
                         </tr>
                     </thead>
                     <tbody id="reportList"></tbody>
@@ -613,7 +621,7 @@
     // nếu chạm ngưỡng đó mà vẫn dài thì dàn sang trang kế (tiêu đề bảng lặp lại).
     const PRINT_MIN_PT = 8;                 // cỡ chữ tối thiểu (pt) — chỉnh tại đây nếu cần
     const PRINT_BASE_PX = 13;               // cỡ chữ gốc của bản in báo cáo (px) khi --ps = 1
-    const PRINT_PAGE_W_MM = 297, PRINT_PAGE_H_MM = 210, PRINT_MARGIN_MM = 8;   // A4 ngang, lề 8mm
+    const PRINT_PAGE_W_MM = 210, PRINT_PAGE_H_MM = 297, PRINT_MARGIN_MM = 8;   // A4 đứng, lề 8mm (khớp @page)
     let printState_ = null;
 
     function prepareReportPrint_(panel) {
@@ -626,7 +634,7 @@
         // Đo trong iframe ẩn có đúng bề rộng vùng in (không phụ thuộc cỡ màn hình điện thoại)
         const frame = document.createElement('iframe');
         frame.setAttribute('aria-hidden', 'true');
-        frame.style.cssText = `position:fixed;left:-99999px;top:0;border:0;visibility:hidden;width:${usableW}px;height:${usableH}px`;
+        frame.style.cssText = `position:fixed;left:-99999px;top:0;border:0;visibility:hidden;width:1280px;height:${usableH}px`;   // rộng >767px để không dính CSS điện thoại (@media screen), bề rộng in do #m quyết định
         document.body.appendChild(frame);
         try {
             const doc = frame.contentDocument;
@@ -638,7 +646,7 @@
             const m = doc.getElementById('m');
             m.innerHTML = panel.outerHTML;
             doc.body.className = 'report-print';
-            const fits = () => m.scrollHeight <= usableH;
+            const fits = () => m.scrollHeight <= usableH && m.scrollWidth <= usableW + 1;
             while (scale > minScale && !fits()) {
                 scale = Math.max(minScale, scale - 0.02);
                 doc.body.style.setProperty('--ps', scale.toFixed(3));
@@ -657,11 +665,11 @@
         const container = document.querySelector('.view:not(.hidden) .print-table-container');
         if (!container) return;
         if (document.body.classList.contains('view-report')) { prepareReportPrint_(container); return; }
-        // Kiểm date: co giãn cả khối vừa 1 trang A4 ngang
+        // Kiểm date: co giãn cả khối vừa 1 trang A4
         container.style.transform = '';
         container.style.width = '';
         const pxPerMM = 96 / 25.4;
-        const usableH = (210 - 16) * pxPerMM, usableW = (297 - 16) * pxPerMM;
+        const usableH = (PRINT_PAGE_H_MM - 2 * PRINT_MARGIN_MM) * pxPerMM, usableW = (PRINT_PAGE_W_MM - 2 * PRINT_MARGIN_MM) * pxPerMM;
         let scale = 1;
         if (container.scrollHeight > usableH) scale = Math.min(scale, usableH / container.scrollHeight);
         if (container.scrollWidth > usableW) scale = Math.min(scale, usableW / container.scrollWidth);
@@ -1166,6 +1174,28 @@
         }
     }
 
+    // Xóa 1 dòng báo cáo: gửi nội dung dòng lên backend để xóa khỏi sheet BaoCaoDate
+    let reportDeleting = false;
+    async function deleteReportRow(idx) {
+        const r = reportRows[idx];
+        if (!r || reportDeleting) return;
+        if (!confirm(`Xóa dòng này khỏi báo cáo?\n\n${r.name}\nSL: ${r.quantity} · Ngày phải rút: ${r.pullDate}`)) return;
+        reportDeleting = true;
+        try {
+            const json = await postJSON_({ action: 'delete_report_row', barcode: r.barcode, scannedAt: r.scannedAt, pullDate: r.pullDate });
+            if (!json || json.status !== 'success') throw new Error((json && (json.message || json.error)) || 'Lỗi không xác định');
+            const k = reportRows.indexOf(r);
+            if (k >= 0) reportRows.splice(k, 1);
+            renderReport();
+            showToast_('Đã xóa dòng');
+        } catch (err) {
+            console.error(err);
+            alert('Không xóa được dòng: ' + err.message + '\n(Nếu vừa cập nhật code, hãy deploy lại Apps Script bằng "Manage deployments → New version".)');
+        } finally {
+            reportDeleting = false;
+        }
+    }
+
     function resetReportFilter() {
         $('reportFilter').value = 'all';
         $('reportDate').value = '';
@@ -1217,6 +1247,7 @@
                 <td class="c pol span3" data-label="Đổi trả NCC">${esc_(r.returnPolicy) || '-'}</td>
                 <td class="c" data-label="Nhân viên">${esc_(r.employeeName)}</td>
                 <td class="c cdc span3" data-label="Đếm ngược đến ngày rút"><span class="cd ${cdCls}">${cdText}</span></td>
+                <td class="c no-print delc"><button class="del" aria-label="Xóa dòng" title="Xóa dòng" onclick="deleteReportRow(${reportRows.indexOf(r)})">✕</button></td>
             </tr>`;
         }).join('');
     }
