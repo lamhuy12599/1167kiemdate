@@ -251,32 +251,48 @@
             tr.due td{ background:#ffe9e5 !important; }
             .panel-head h2{ font-size:13px !important; }
 
-            /* ===== BÁO CÁO: in giống y hệt khung trên màn hình =====
-               Giữ màu sắc, cỡ chữ dễ đọc, vừa chiều ngang A4 ngang; nhiều dòng thì sang trang kế
-               (tiêu đề bảng lặp lại ở mỗi trang), KHÔNG thu nhỏ cả bảng cho vừa 1 trang. */
-            body.view-report *{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
-            body.view-report .panel{ transform:none !important; width:100% !important; padding:0 !important; }
-            body.view-report .panel-head{ margin-bottom:4px !important; }
-            body.view-report .panel-head h2{ font-size:17px !important; margin:0 !important; }
-            body.view-report #reportSummary{ display:block !important; font-size:11px !important; color:#444 !important; margin:0 0 8px !important; }
-            body.view-report table{ font-size:11px !important; table-layout:auto; width:100% !important; }
-            body.view-report td, body.view-report th{ font-size:11px !important; line-height:1.3 !important; padding:5px 6px !important; border-bottom:1px solid #d4d4d8 !important; }
-            body.view-report thead th{ color:#fff !important; background:#00843D !important; }
-            body.view-report th.th-sl{ background:#006c31 !important; }
-            body.view-report th.th-rut{ background:#065f46 !important; }
-            body.view-report th.th-pull{ background:#EE2E24 !important; }
-            body.view-report th.th-scan{ background:#27272a !important; }
-            body.view-report th.th-policy{ background:#115e59 !important; }
-            body.view-report th.th-emp{ background:#3f3f46 !important; }
-            body.view-report th.th-cd{ background:#b45309 !important; }
-            body.view-report td.qty{ background:#f4f4f5 !important; font-weight:700 !important; }
-            body.view-report td.pt{ background:#ecfdf3 !important; color:#006c31 !important; font-weight:700 !important; }
-            body.view-report td.pd{ background:#fff1ee !important; color:#d62219 !important; font-weight:700 !important; }
-            body.view-report td.pol{ background:#effcf8 !important; color:#0f766e !important; font-weight:600 !important; min-width:0 !important; max-width:none !important; }
-            body.view-report td.mono{ color:#52525b !important; font-size:10px !important; }
-            body.view-report tr.due td{ background:#ffe9e5 !important; }
-            body.view-report tr.due td.pd{ background:#ffd5cf !important; }
         }
+
+        /* ===== BÁO CÁO IN: vừa 1 trang A4 theo chiều dọc =====
+           Cỡ chữ = N px × --ps. JS (prepareReportPrint_) hạ --ps dần cho đến khi vừa 1 trang,
+           tối thiểu tới cỡ chữ 8pt; chạm ngưỡng đó mà vẫn dài thì mới dàn sang trang kế
+           (tiêu đề bảng lặp lại ở mỗi trang). Không nằm trong @media print để iframe đo dùng chung. */
+        body.report-print{ --ps:1; background:#fff !important; color:#000 !important; margin:0 !important; padding:0 !important; }
+        body.report-print, body.report-print *{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+        body.report-print .no-print, body.report-print .filters, body.report-print button{ display:none !important; }
+        body.report-print .container{ max-width:100% !important; padding:0 !important; }
+        body.report-print .panel{ border:none !important; border-radius:0 !important; background:#fff !important; padding:0 !important; width:100% !important; transform:none !important; }
+        body.report-print .panel-head{ display:block !important; margin:0 0 calc(4px*var(--ps)) !important; }
+        body.report-print .panel-head h2{ font-size:calc(18px*var(--ps)) !important; margin:0 !important; }
+        body.report-print #reportSummary{ display:block !important; font-size:calc(13px*var(--ps)) !important; color:#444 !important; margin:0 0 calc(6px*var(--ps)) !important; }
+        body.report-print .table-wrap{ border:none !important; overflow:visible !important; border-radius:0 !important; }
+        body.report-print table{ width:100% !important; table-layout:auto; font-size:calc(13px*var(--ps)) !important; }
+        body.report-print thead{ display:table-header-group; }
+        body.report-print tr{ break-inside:avoid; page-break-inside:avoid; }
+        body.report-print td, body.report-print th{
+            font-size:calc(13px*var(--ps)) !important; line-height:1.2 !important;
+            padding:calc(4px*var(--ps)) calc(6px*var(--ps)) !important;
+            border-bottom:1px solid #d4d4d8 !important; color:#000 !important; background:#fff !important;
+        }
+        body.report-print td .cd{ font-size:calc(13px*var(--ps)) !important; padding:0 calc(8px*var(--ps)) !important; }
+        body.report-print thead th{ color:#fff !important; background:#00843D !important; }
+        body.report-print th.th-sl{ background:#006c31 !important; }
+        body.report-print th.th-rut{ background:#065f46 !important; }
+        body.report-print th.th-pull{ background:#EE2E24 !important; }
+        body.report-print th.th-scan{ background:#27272a !important; }
+        body.report-print th.th-policy{ background:#115e59 !important; }
+        body.report-print th.th-emp{ background:#3f3f46 !important; }
+        body.report-print th.th-cd{ background:#b45309 !important; }
+        body.report-print td.qty{ background:#f4f4f5 !important; font-weight:700 !important; }
+        body.report-print td.pt{ background:#ecfdf3 !important; color:#006c31 !important; font-weight:700 !important; }
+        body.report-print td.pd{ background:#fff1ee !important; color:#d62219 !important; font-weight:700 !important; }
+        body.report-print td.pol{ background:#effcf8 !important; color:#0f766e !important; font-weight:600 !important; min-width:0 !important; max-width:none !important; }
+        body.report-print td.mono{ color:#52525b !important; }
+        body.report-print tr.due td{ background:#ffe9e5 !important; }
+        body.report-print tr.due td.pd{ background:#ffd5cf !important; }
+        body.report-print td .cd-green{ background:#dcfce7 !important; color:#166534 !important; }
+        body.report-print td .cd-orange{ background:#ffedd5 !important; color:#9a3412 !important; }
+        body.report-print td .cd-red{ background:#fee2e2 !important; color:#b91c1c !important; }
     </style>
 </head>
 <body>
@@ -592,16 +608,56 @@
     }
     window.addEventListener('hashchange', applyView);
 
-    /* ---------- In ấn: co giãn vừa 1 trang A4 ngang ---------- */
-    window.addEventListener('beforeprint', () => {
-        if (document.documentElement.classList.contains('dark')) {
-            document.documentElement.classList.remove('dark');
-            document.documentElement.dataset.wasDark = "true";
-        }
+    /* ---------- In ấn ---------- */
+    // Báo cáo: vừa 1 trang A4 theo chiều dọc bằng cách hạ cỡ chữ; chữ không nhỏ hơn cỡ 8 (pt),
+    // nếu chạm ngưỡng đó mà vẫn dài thì dàn sang trang kế (tiêu đề bảng lặp lại).
+    const PRINT_MIN_PT = 8;                 // cỡ chữ tối thiểu (pt) — chỉnh tại đây nếu cần
+    const PRINT_BASE_PX = 13;               // cỡ chữ gốc của bản in báo cáo (px) khi --ps = 1
+    const PRINT_PAGE_W_MM = 297, PRINT_PAGE_H_MM = 210, PRINT_MARGIN_MM = 8;   // A4 ngang, lề 8mm
+    let printState_ = null;
+
+    function prepareReportPrint_(panel) {
+        const pxPerMM = 96 / 25.4;
+        const usableW = (PRINT_PAGE_W_MM - 2 * PRINT_MARGIN_MM) * pxPerMM;
+        const usableH = (PRINT_PAGE_H_MM - 2 * PRINT_MARGIN_MM) * pxPerMM - 6;   // trừ ~6px an toàn
+        const minScale = (PRINT_MIN_PT * 96 / 72) / PRINT_BASE_PX;               // ≈ 0.82
+        let scale = 1;
+
+        // Đo trong iframe ẩn có đúng bề rộng vùng in (không phụ thuộc cỡ màn hình điện thoại)
+        const frame = document.createElement('iframe');
+        frame.setAttribute('aria-hidden', 'true');
+        frame.style.cssText = `position:fixed;left:-99999px;top:0;border:0;visibility:hidden;width:${usableW}px;height:${usableH}px`;
+        document.body.appendChild(frame);
+        try {
+            const doc = frame.contentDocument;
+            const css = Array.from(document.querySelectorAll('style')).map(x => x.textContent).join('\n');
+            doc.open();
+            doc.write(`<!doctype html><html><head><meta charset="utf-8"><style>${css}</style></head>` +
+                      `<body class="report-print"><div id="m" style="width:${usableW}px"></div></body></html>`);
+            doc.close();
+            const m = doc.getElementById('m');
+            m.innerHTML = panel.outerHTML;
+            doc.body.className = 'report-print';
+            const fits = () => m.scrollHeight <= usableH;
+            while (scale > minScale && !fits()) {
+                scale = Math.max(minScale, scale - 0.02);
+                doc.body.style.setProperty('--ps', scale.toFixed(3));
+            }
+        } catch (e) { scale = 1; }
+        frame.remove();
+        document.body.style.setProperty('--ps', scale.toFixed(3));
+        document.body.classList.add('report-print');
+        return scale;
+    }
+
+    function preparePrint_() {
+        if (printState_) return;
+        printState_ = { dark: document.documentElement.classList.contains('dark'), containers: [] };
+        if (printState_.dark) document.documentElement.classList.remove('dark');
         const container = document.querySelector('.view:not(.hidden) .print-table-container');
         if (!container) return;
-        // Báo cáo: in đúng cỡ như trên màn hình, nhiều dòng thì sang trang kế (xem CSS in), không co giãn
-        if (document.body.classList.contains('view-report')) return;
+        if (document.body.classList.contains('view-report')) { prepareReportPrint_(container); return; }
+        // Kiểm date: co giãn cả khối vừa 1 trang A4 ngang
         container.style.transform = '';
         container.style.width = '';
         const pxPerMM = 96 / 25.4;
@@ -613,14 +669,25 @@
             container.style.transform = `scale(${scale})`;
             container.style.width = `${100 / scale}%`;
         }
-    });
-    window.addEventListener('afterprint', () => {
-        if (document.documentElement.dataset.wasDark === "true") {
-            document.documentElement.classList.add('dark');
-            delete document.documentElement.dataset.wasDark;
-        }
-        document.querySelectorAll('.print-table-container').forEach(c => { c.style.transform = ''; c.style.width = ''; });
-    });
+        printState_.containers.push(container);
+    }
+
+    function restorePrint_() {
+        if (!printState_) return;
+        if (printState_.dark) document.documentElement.classList.add('dark');
+        printState_.containers.forEach(c => { c.style.transform = ''; c.style.width = ''; });
+        document.body.classList.remove('report-print');
+        document.body.style.removeProperty('--ps');
+        printState_ = null;
+    }
+
+    window.addEventListener('beforeprint', preparePrint_);
+    window.addEventListener('afterprint', restorePrint_);
+    if (window.matchMedia) {   // Safari/iOS: không phải lúc nào cũng bắn beforeprint/afterprint
+        const mq = window.matchMedia('print');
+        const onMq = e => (e.matches ? preparePrint_() : restorePrint_());
+        if (mq.addEventListener) mq.addEventListener('change', onMq); else if (mq.addListener) mq.addListener(onMq);
+    }
 
     /* ---------- Âm thanh (dùng lại 1 AudioContext duy nhất) ---------- */
     let audioCtx = null;
