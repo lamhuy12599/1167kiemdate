@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>1167-Trương Định</title>
     <link class="no-print" rel="icon" type="image/png" href="https://upload.wikimedia.org/wikipedia/commons/thumb/4/40/7-eleven_logo.svg/960px-7-eleven_logo.svg.png">
     <script>
@@ -75,8 +75,9 @@
         .panel-head{ display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:8px; margin-bottom:12px; }
         .panel-head h2{ margin:0; font-size:17px; font-weight:700; }
         .btn-row{ display:flex; flex-wrap:wrap; gap:8px; }
-        .layout{ display:grid; grid-template-columns:1fr; gap:16px; }
-        @media (min-width:1024px){ .layout{ grid-template-columns:340px 1fr; align-items:start; } }
+        .layout{ display:grid; grid-template-columns:minmax(0,1fr); gap:16px; }
+        .layout > *{ min-width:0; }
+        @media (min-width:1024px){ .layout{ grid-template-columns:340px minmax(0,1fr); align-items:start; } }
 
         /* Trang chủ */
         .home-grid{ display:grid; grid-template-columns:1fr; gap:16px; max-width:900px; margin:20px auto; }
@@ -165,10 +166,75 @@
         .progress-success{ background:#d1fae5; color:#047857; }
         .progress-error{ background:#ffe4e6; color:#be123c; }
 
+        /* ---- Thành phần dùng chung ---- */
+        .seg{ display:flex; gap:6px; }
+        .seg button{ flex:1 1 0; min-width:0; padding:10px 0; border:1px solid var(--border); background:var(--input); border-radius:10px; font-weight:700; color:var(--text); }
+        .seg button.on{ background:var(--green); border-color:var(--green); color:#fff; }
+        .stepper{ display:flex; gap:8px; }
+        .stepper .input{ text-align:center; font-weight:700; }
+        .stepper .btn{ width:48px; padding:0; font-size:20px; flex-shrink:0; }
+        .toast{ position:fixed; left:50%; transform:translateX(-50%); bottom:24px; max-width:90vw; background:#111827; color:#fff; padding:10px 18px; border-radius:999px; font-weight:600; z-index:60; box-shadow:0 6px 16px rgba(0,0,0,.3); text-align:center; }
+        .mobile-bar{ display:none; position:fixed; left:0; right:0; bottom:0; z-index:40; gap:8px; padding:8px 10px calc(8px + env(safe-area-inset-bottom)); background:var(--card); border-top:1px solid var(--border); }
+        .only-mobile{ display:none; }
+
+        /* ============ ĐIỆN THOẠI ============ */
+        @media screen and (max-width:767px){
+            body{ font-size:15px; }
+            .container{ padding:10px; padding-left:max(10px,env(safe-area-inset-left)); padding-right:max(10px,env(safe-area-inset-right)); }
+            .topbar{ flex-wrap:nowrap; padding:10px 12px; margin-bottom:12px; border-radius:14px; }
+            .brand img{ width:40px; height:40px; }
+            .brand h1{ font-size:14px; line-height:1.25; }
+            .brand h1 .sep{ display:none; }
+            .brand h1 .accent{ display:block; font-size:12px; }
+            .brand p{ display:none; }
+            .top-actions{ flex-wrap:nowrap; flex-shrink:0; }
+            .btn-ghost .lbl{ display:none; }
+            .btn{ min-height:44px; }
+            .btn-icon{ width:44px; }
+            .panel{ padding:14px; border-radius:14px; }
+            .field{ margin-bottom:12px; }
+            .input{ font-size:16px; min-height:44px; }  /* >=16px để iPhone không tự phóng to khi chạm vào ô nhập */
+            .seg button{ min-height:44px; }
+            .suggest li{ padding:12px 10px; }
+            .home-card{ padding:20px; }
+            .btn-row{ display:grid; grid-template-columns:1fr 1fr; width:100%; }
+            .btn-submit-desktop{ display:none; }
+            .only-mobile{ display:inline-block; }
+            .panel-head h2{ font-size:16px; }
+            .filters .f{ flex:1 1 100%; min-width:0; }
+            .toast{ bottom:calc(84px + env(safe-area-inset-bottom)); }
+            body.view-check .mobile-bar{ display:flex; }
+            body.view-check .container{ padding-bottom:96px; }
+            .mobile-bar .btn{ flex:1; padding:0 6px; font-size:13px; white-space:nowrap; }
+            .mobile-bar .btn-green{ flex:1.6; }
+            #view-report .btn-row .only-mobile{ grid-column:1/-1; }
+            .overlay{ align-items:flex-end; padding:0; }
+            .modal{ max-width:none; border-radius:18px 18px 0 0; max-height:92vh; }
+
+            /* Bảng -> thẻ: mỗi dòng là 1 thẻ, không cần cuộn ngang */
+            .table-wrap{ border:0; overflow:visible; border-radius:0; }
+            table, tbody{ display:block; }
+            thead{ display:none; }
+            tbody tr{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px 10px; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:12px; margin-bottom:10px; position:relative; }
+            tbody tr.due{ background:var(--due); border-color:#ef4444; }
+            td{ display:block; padding:0; border:0; text-align:left !important; min-width:0; word-break:break-word; background:transparent !important; max-width:none; }
+            td:not(.bc):not(.name):not(.delc)::before{ content:attr(data-label); display:block; font-size:10px; line-height:1.2; margin-bottom:2px; color:var(--muted); font-weight:700; text-transform:uppercase; letter-spacing:.03em; }
+            td.name{ grid-column:1/-1; order:-2; font-size:15px; padding-right:44px; }
+            td.bc{ grid-column:1/-1; order:-1; }
+            td.span3{ grid-column:1/-1; }
+            td.span2{ grid-column:span 2; }
+            td.qty, td.pt{ font-weight:700; }
+            td.pd{ font-size:16px; padding:8px 10px; border-radius:10px; background:var(--tint-red) !important; }
+            td.pol{ order:5; min-width:0; font-size:13px; padding:8px 10px; border-radius:10px; background:var(--tint-teal) !important; }
+            td.cdc{ order:6; }
+            td.delc{ position:absolute; top:4px; right:4px; }
+            .del{ width:44px; height:44px; font-size:18px; }
+        }
+
         /* ============ IN ẤN: vừa 1 trang A4 ngang ============ */
         @page{ size:A4 landscape; margin:8mm; }
         @media print{
-            .no-print, .topbar, button, .suggest, .overlay{ display:none !important; }
+            .no-print, .topbar, button, .suggest, .overlay, .mobile-bar, .toast{ display:none !important; }
             html, body{ background:#fff !important; color:#000 !important; margin:0 !important; padding:0 !important; }
             .container{ max-width:100% !important; padding:0 !important; }
             .layout{ display:block !important; }
@@ -184,6 +250,32 @@
             thead th{ color:#fff !important; background:#00843D !important; }
             tr.due td{ background:#ffe9e5 !important; }
             .panel-head h2{ font-size:13px !important; }
+
+            /* ===== BÁO CÁO: in giống y hệt khung trên màn hình =====
+               Giữ màu sắc, cỡ chữ dễ đọc, vừa chiều ngang A4 ngang; nhiều dòng thì sang trang kế
+               (tiêu đề bảng lặp lại ở mỗi trang), KHÔNG thu nhỏ cả bảng cho vừa 1 trang. */
+            body.view-report *{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+            body.view-report .panel{ transform:none !important; width:100% !important; padding:0 !important; }
+            body.view-report .panel-head{ margin-bottom:4px !important; }
+            body.view-report .panel-head h2{ font-size:17px !important; margin:0 !important; }
+            body.view-report #reportSummary{ display:block !important; font-size:11px !important; color:#444 !important; margin:0 0 8px !important; }
+            body.view-report table{ font-size:11px !important; table-layout:auto; width:100% !important; }
+            body.view-report td, body.view-report th{ font-size:11px !important; line-height:1.3 !important; padding:5px 6px !important; border-bottom:1px solid #d4d4d8 !important; }
+            body.view-report thead th{ color:#fff !important; background:#00843D !important; }
+            body.view-report th.th-sl{ background:#006c31 !important; }
+            body.view-report th.th-rut{ background:#065f46 !important; }
+            body.view-report th.th-pull{ background:#EE2E24 !important; }
+            body.view-report th.th-scan{ background:#27272a !important; }
+            body.view-report th.th-policy{ background:#115e59 !important; }
+            body.view-report th.th-emp{ background:#3f3f46 !important; }
+            body.view-report th.th-cd{ background:#b45309 !important; }
+            body.view-report td.qty{ background:#f4f4f5 !important; font-weight:700 !important; }
+            body.view-report td.pt{ background:#ecfdf3 !important; color:#006c31 !important; font-weight:700 !important; }
+            body.view-report td.pd{ background:#fff1ee !important; color:#d62219 !important; font-weight:700 !important; }
+            body.view-report td.pol{ background:#effcf8 !important; color:#0f766e !important; font-weight:600 !important; min-width:0 !important; max-width:none !important; }
+            body.view-report td.mono{ color:#52525b !important; font-size:10px !important; }
+            body.view-report tr.due td{ background:#ffe9e5 !important; }
+            body.view-report tr.due td.pd{ background:#ffd5cf !important; }
         }
     </style>
 </head>
@@ -199,8 +291,8 @@
             </div>
         </div>
         <div class="top-actions">
-            <button id="homeBtn" class="btn btn-ghost hidden" onclick="go('home')">🏠 Trang chủ</button>
-            <button id="themeToggleBtn" class="btn btn-ghost" onclick="toggleTheme()">🌙 Chế độ tối</button>
+            <button id="homeBtn" class="btn btn-ghost hidden" onclick="go('home')">🏠<span class="lbl"> Trang chủ</span></button>
+            <button id="themeToggleBtn" class="btn btn-ghost" onclick="toggleTheme()">🌙<span class="lbl"> Chế độ tối</span></button>
             <button id="settingsBtn" class="btn btn-ghost btn-icon" title="Cài đặt" onclick="openSettings()">⚙️</button>
         </div>
     </header>
@@ -216,7 +308,7 @@
             <button class="home-card" onclick="go('report')">
                 <span class="ico">📊</span>
                 <span class="t">Báo Cáo Kiểm Date</span>
-                <span class="d">Danh sách đã gửi lên hệ thống, lọc theo ngày phải rút và đếm ngược đến hết date.</span>
+                <span class="d">Danh sách đã gửi lên hệ thống, lọc theo ngày phải rút và đếm ngược đến ngày phải rút.</span>
             </button>
         </div>
     </section>
@@ -262,7 +354,11 @@
 
                 <div class="field">
                     <label for="quantity">Số Lượng Sản Phẩm</label>
-                    <input type="number" id="quantity" min="1" value="1" class="input input-bold">
+                    <div class="stepper">
+                        <button type="button" class="btn btn-dark" onclick="stepQty(-1)" aria-label="Giảm">−</button>
+                        <input type="number" id="quantity" min="1" value="1" inputmode="numeric" class="input input-bold">
+                        <button type="button" class="btn btn-dark" onclick="stepQty(1)" aria-label="Tăng">+</button>
+                    </div>
                 </div>
 
                 <div class="field">
@@ -272,26 +368,29 @@
 
                 <div class="field">
                     <label for="pullType">Quy định rút hàng</label>
-                    <select id="pullType" class="input input-bold" style="color:var(--green-d)">
-                        <option value="H-2">H-2 (Rút trước khi hết date 2 giờ)</option>
-                        <option value="D-1">D-1 (Rút trước khi hết date 1 ngày)</option>
-                        <option value="D-3">D-3 (Rút trước khi hết date 3 ngày)</option>
-                        <option value="D-7">D-7 (Rút trước khi hết date 7 ngày)</option>
-                        <option value="D-15">D-15 (Rút trước khi hết date 15 ngày)</option>
-                    </select>
+                    <div class="seg" id="pullSeg">
+                        <button type="button" data-v="H-2" class="on">H-2</button>
+                        <button type="button" data-v="D-1">D-1</button>
+                        <button type="button" data-v="D-3">D-3</button>
+                        <button type="button" data-v="D-7">D-7</button>
+                        <button type="button" data-v="D-15">D-15</button>
+                    </div>
+                    <input type="hidden" id="pullType" value="H-2">
+                    <p id="pullDesc" class="hint">Rút trước khi hết date 2 giờ</p>
                 </div>
 
                 <button class="btn btn-orange btn-block" onclick="addItem()">Ghi Nhận Kiểm Date (Tạm Tính)</button>
             </div>
 
-            <div class="panel print-table-container">
+            <div class="panel print-table-container" id="listPanel">
                 <div class="panel-head">
                     <h2>Danh Sách Chờ Gửi — Báo Cáo Date Trong Ca</h2>
                     <div class="btn-row no-print">
                         <button class="btn" onclick="window.print()">🖨️ In</button>
+                        <button class="btn only-mobile" onclick="toggleSortPullDate()">↕ Ngày rút</button>
                         <button class="btn btn-emerald" onclick="exportToExcel()">📦 Excel</button>
                         <button class="btn btn-rose" onclick="clearAllData()">🗑️ Xóa Tất Cả</button>
-                        <button id="btnSubmitSheet" class="btn btn-green" onclick="submitDataToSheet()">🚀 Gửi &amp; Chốt Ca</button>
+                        <button id="btnSubmitSheet" class="btn btn-green btn-submit-desktop" onclick="submitDataToSheet()">🚀 Gửi &amp; Chốt Ca</button>
                     </div>
                 </div>
                 <div class="table-wrap">
@@ -326,6 +425,7 @@
                 <div class="btn-row no-print">
                     <button class="btn" onclick="window.print()">🖨️ In</button>
                     <button id="btnReportRefresh" class="btn btn-green" onclick="loadReport()">🔄 Làm mới</button>
+                    <button class="btn only-mobile" onclick="toggleReportSort()">↕ Ngày rút</button>
                 </div>
             </div>
             <div class="no-print" style="margin-bottom:8px"><span id="reportStatus" class="chip chip-wait">⏳ Đang tải báo cáo...</span></div>
@@ -335,9 +435,9 @@
                     <label for="reportFilter">Lọc theo ngày phải rút</label>
                     <select id="reportFilter" class="input" onchange="renderReport()">
                         <option value="all">Tất cả</option>
-                        <option value="due">Đến hạn rút (hôm nay &amp; quá hạn)</option>
-                        <option value="3">Đến hạn trong 3 ngày tới</option>
-                        <option value="7">Đến hạn trong 7 ngày tới</option>
+                        <option value="due">Phải rút hôm nay</option>
+                        <option value="3">Phải rút trong 3 ngày tới</option>
+                        <option value="7">Phải rút trong 7 ngày tới</option>
                     </select>
                 </div>
                 <div class="f">
@@ -347,7 +447,7 @@
                 <button class="btn" onclick="resetReportFilter()">Bỏ lọc</button>
             </div>
 
-            <p id="reportSummary" class="summary no-print"></p>
+            <p id="reportSummary" class="summary"></p>
 
             <div class="table-wrap">
                 <table>
@@ -362,7 +462,7 @@
                             <th class="c th-scan">Ngày Giờ Quét</th>
                             <th class="c th-policy">Đổi Trả NCC</th>
                             <th class="c th-emp">Nhân Viên</th>
-                            <th class="c th-cd">Đếm Ngược Hết Date</th>
+                            <th class="c th-cd">Đếm Ngược Đến Ngày Rút</th>
                         </tr>
                     </thead>
                     <tbody id="reportList"></tbody>
@@ -372,6 +472,14 @@
         </div>
     </section>
 </div>
+
+<!-- Thanh thao tác cố định (chỉ hiện trên điện thoại, ở trang Kiểm date) -->
+<div class="mobile-bar no-print">
+    <button class="btn btn-dark" onclick="scrollToForm()">➕ Nhập</button>
+    <button class="btn" onclick="scrollToList()">📋 Danh sách <span id="barCount" class="badge">0</span></button>
+    <button id="barSubmit" class="btn btn-green" onclick="submitDataToSheet()">🚀 Gửi &amp; Chốt Ca</button>
+</div>
+<div id="toast" class="toast no-print hidden"></div>
 
 <!-- Cài đặt -->
 <div id="settingsOverlay" class="overlay no-print hidden">
@@ -457,7 +565,8 @@
 
     /* ---------- Chế độ sáng / tối ---------- */
     function updateThemeButton() {
-        $('themeToggleBtn').textContent = document.documentElement.classList.contains('dark') ? '☀️ Chế độ sáng' : '🌙 Chế độ tối';
+        const dark = document.documentElement.classList.contains('dark');
+        $('themeToggleBtn').innerHTML = (dark ? '☀️' : '🌙') + '<span class="lbl"> ' + (dark ? 'Chế độ sáng' : 'Chế độ tối') + '</span>';
     }
     function toggleTheme() {
         const dark = document.documentElement.classList.toggle('dark');
@@ -474,6 +583,8 @@
         const view = (h === 'check' || h === 'report') ? h : 'home';
         ['home', 'check', 'report'].forEach(v => $('view-' + v).classList.toggle('hidden', v !== view));
         $('homeBtn').classList.toggle('hidden', view === 'home');
+        document.body.classList.toggle('view-check', view === 'check');
+        document.body.classList.toggle('view-report', view === 'report');
         if (view !== 'check') stopCamera();
         if (view === 'check') loadScript_(QR_URL, 'Html5Qrcode').catch(() => {});
         if (view === 'report') loadReport();
@@ -489,6 +600,8 @@
         }
         const container = document.querySelector('.view:not(.hidden) .print-table-container');
         if (!container) return;
+        // Báo cáo: in đúng cỡ như trên màn hình, nhiều dòng thì sang trang kế (xem CSS in), không co giãn
+        if (document.body.classList.contains('view-report')) return;
         container.style.transform = '';
         container.style.width = '';
         const pxPerMM = 96 / 25.4;
@@ -721,7 +834,7 @@
         }
         const config = {
             fps: 15,
-            qrbox: { width: 260, height: 140 },
+            qrbox: (w, h) => ({ width: Math.floor(Math.min(w * 0.85, 320)), height: Math.floor(Math.min(h * 0.6, 160)) }),
             formatsToSupport: [
                 Html5QrcodeSupportedFormats.EAN_13, Html5QrcodeSupportedFormats.EAN_8,
                 Html5QrcodeSupportedFormats.UPC_A, Html5QrcodeSupportedFormats.UPC_E,
@@ -733,6 +846,7 @@
             const input = $('barcode');
             input.value = decodedText.trim();
             input.dispatchEvent(new Event('input'));
+            if (navigator.vibrate) navigator.vibrate(60);
             stopCamera();
         }, () => {})
         .catch(err => {
@@ -787,22 +901,23 @@
         const badge = $('homePending');
         badge.textContent = n;
         badge.classList.toggle('hidden', n === 0);
+        $('barCount').textContent = n;
 
         if (!n) { $('dateInventoryList').innerHTML = ""; $('emptyAlert').classList.remove('hidden'); return; }
         $('emptyAlert').classList.add('hidden');
 
         $('dateInventoryList').innerHTML = dateInventory.map((it, i) => `
             <tr>
-                <td class="mono">${esc_(it.barcode) || '---'}</td>
-                <td class="strong">${esc_(it.name)}</td>
-                <td class="c qty">${esc_(it.quantity)}</td>
-                <td>${fmtISODate_(it.expiryDate)}</td>
-                <td class="c pt">${esc_(it.pullType)}</td>
-                <td class="c pd">${esc_(it.pullDate)}</td>
-                <td class="c mono">${esc_(it.timestamp)}</td>
-                <td class="c pol">${esc_(it.returnPolicy) || '-'}</td>
-                <td class="c">${esc_(it.employeeName)}</td>
-                <td class="c no-print"><button class="del" onclick="deleteItem(${i})">✕</button></td>
+                <td class="bc mono" data-label="Barcode">${esc_(it.barcode) || '---'}</td>
+                <td class="name strong" data-label="Tên sản phẩm">${esc_(it.name)}</td>
+                <td class="c qty" data-label="Số lượng">${esc_(it.quantity)}</td>
+                <td data-label="Hết hạn">${fmtISODate_(it.expiryDate)}</td>
+                <td class="c pt" data-label="Mã rút">${esc_(it.pullType)}</td>
+                <td class="c pd span3" data-label="Ngày phải rút">${esc_(it.pullDate)}</td>
+                <td class="c mono span2" data-label="Quét lúc">${esc_(it.timestamp)}</td>
+                <td class="c pol span3" data-label="Đổi trả NCC">${esc_(it.returnPolicy) || '-'}</td>
+                <td class="c" data-label="Nhân viên">${esc_(it.employeeName)}</td>
+                <td class="c no-print delc"><button class="del" aria-label="Xóa" onclick="deleteItem(${i})">✕</button></td>
             </tr>`).join('');
     }
 
@@ -838,7 +953,11 @@
         setMemoryHint_("");
         setPolicy_("-");
         hideSuggest_();
-        $('barcode').focus();
+        showToast_(`✅ Đã ghi nhận · ${dateInventory.length} dòng chờ gửi`);
+        if (navigator.vibrate) navigator.vibrate(40);
+        // Trên điện thoại: không bật bàn phím, chỉ cuộn về ô barcode để quét tiếp
+        if (window.matchMedia('(pointer:coarse)').matches) $('barcode').scrollIntoView({ block: 'center' });
+        else $('barcode').focus();
     }
 
     function deleteItem(index) {
@@ -862,9 +981,8 @@
         if (!dateInventory.length) { alert("Không có dữ liệu nào trong bảng tạm để gửi!"); return; }
         if (!confirm(`Bạn muốn đồng bộ toàn bộ ${dateInventory.length} dòng dữ liệu này lên hệ thống và chốt ca chứ?`)) return;
 
-        const btn = $('btnSubmitSheet');
-        btn.disabled = true;
-        btn.textContent = "⏳ Đang gửi dữ liệu...";
+        const submitBtns = [$('btnSubmitSheet'), $('barSubmit')];
+        submitBtns.forEach(b => { b.disabled = true; b.textContent = "⏳ Đang gửi..."; });
         try {
             const res = await postJSON_({ action: "sync_batch", data: dateInventory });
             if (res.status === "success") {
@@ -880,8 +998,7 @@
             console.error(err);
             alert("❌ Lỗi kết nối! Bạn hãy kiểm tra lại cấu hình Deploy trên Apps Script đã ở chế độ 'Anyone' chưa, hoặc kiểm tra lại đường dẫn SCRIPT_URL.");
         } finally {
-            btn.disabled = false;
-            btn.textContent = "🚀 Gửi & Chốt Ca";
+            submitBtns.forEach(b => { b.disabled = false; b.textContent = "🚀 Gửi & Chốt Ca"; });
         }
     }
 
@@ -951,6 +1068,7 @@
     let reportRows = [];
     let reportLoading = false;
     let reportSortDir = 'asc';
+    let reportLoadedAt = '';
 
     function setReportStatus_(text, cls) {
         const el = $('reportStatus');
@@ -968,8 +1086,9 @@
             const json = await res.json();
             if (!json || json.status !== 'success') throw new Error((json && (json.message || json.error)) || 'Lỗi không xác định');
             reportRows = Array.isArray(json.rows) ? json.rows : [];
-            renderReport();
             const time = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+            reportLoadedAt = time + ' ' + new Date().toLocaleDateString('vi-VN');
+            renderReport();
             setReportStatus_(`✅ Cập nhật lúc ${time}` + (json.purged ? ` · đã xóa ${json.purged} dòng hết date` : ''), 'chip-ok');
         } catch (err) {
             console.error(err);
@@ -1008,29 +1127,29 @@
         $('reportSortIcon').textContent = reportSortDir === 'asc' ? '▲' : '▼';
 
         const dueCount = rows.filter(r => r.pullDaysLeft != null && r.pullDaysLeft <= 0).length;
-        $('reportSummary').textContent = `Hiển thị ${rows.length}/${reportRows.length} dòng · ${dueCount} dòng đã đến hạn rút`;
+        $('reportSummary').textContent = `Hiển thị ${rows.length}/${reportRows.length} dòng · ${dueCount} dòng phải rút hôm nay` + (reportLoadedAt ? ` · Dữ liệu lúc ${reportLoadedAt}` : '');
         $('reportEmpty').classList.toggle('hidden', rows.length > 0);
 
         $('reportList').innerHTML = rows.map(r => {
             const d = r.daysLeft;
             let cdText = '-', cdCls = 'cd-na';
             if (d != null) {
-                cdText = d <= 0 ? 'Hết date hôm nay' : `Còn ${d} ngày`;
+                cdText = d < 0 ? 'Quá ngày rút' : (d === 0 ? 'Hôm nay phải rút' : `Còn ${d} ngày`);
                 cdCls = d <= 1 ? 'cd-red' : (d <= 3 ? 'cd-orange' : 'cd-green');
             }
             const due = (r.pullDaysLeft != null && r.pullDaysLeft <= 0) ? ' class="due"' : '';
             return `
             <tr${due}>
-                <td class="mono">${esc_(r.barcode) || '---'}</td>
-                <td class="strong">${esc_(r.name)}</td>
-                <td class="c qty">${esc_(r.quantity)}</td>
-                <td>${esc_(r.expiryDate)}</td>
-                <td class="c pt">${esc_(r.pullType)}</td>
-                <td class="c pd">${esc_(r.pullDate)}</td>
-                <td class="c mono">${esc_(r.scannedAt)}</td>
-                <td class="c pol">${esc_(r.returnPolicy) || '-'}</td>
-                <td class="c">${esc_(r.employeeName)}</td>
-                <td class="c"><span class="cd ${cdCls}">${cdText}</span></td>
+                <td class="bc mono" data-label="Barcode">${esc_(r.barcode) || '---'}</td>
+                <td class="name strong" data-label="Tên sản phẩm">${esc_(r.name)}</td>
+                <td class="c qty" data-label="Số lượng">${esc_(r.quantity)}</td>
+                <td data-label="Hết hạn">${esc_(r.expiryDate)}</td>
+                <td class="c pt" data-label="Mã rút">${esc_(r.pullType)}</td>
+                <td class="c pd span3" data-label="Ngày phải rút">${esc_(r.pullDate)}</td>
+                <td class="c mono span2" data-label="Quét lúc">${esc_(r.scannedAt)}</td>
+                <td class="c pol span3" data-label="Đổi trả NCC">${esc_(r.returnPolicy) || '-'}</td>
+                <td class="c" data-label="Nhân viên">${esc_(r.employeeName)}</td>
+                <td class="c cdc span3" data-label="Đếm ngược đến ngày rút"><span class="cd ${cdCls}">${cdText}</span></td>
             </tr>`;
         }).join('');
     }
@@ -1186,6 +1305,38 @@
         } finally {
             btn.disabled = false;
         }
+    });
+
+    /* ---------- Tiện ích cho điện thoại ---------- */
+    const PULL_DESC = {
+        'H-2': 'Rút trước khi hết date 2 giờ', 'D-1': 'Rút trước khi hết date 1 ngày', 'D-3': 'Rút trước khi hết date 3 ngày',
+        'D-7': 'Rút trước khi hết date 7 ngày', 'D-15': 'Rút trước khi hết date 15 ngày'
+    };
+    $('pullSeg').addEventListener('click', function (e) {
+        const b = e.target.closest('button[data-v]');
+        if (!b) return;
+        $('pullType').value = b.dataset.v;
+        this.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+        $('pullDesc').textContent = PULL_DESC[b.dataset.v] || '';
+    });
+    function stepQty(d) {
+        const q = $('quantity');
+        q.value = Math.max(1, (parseInt(q.value) || 1) + d);
+    }
+    let toastTimer = null;
+    function showToast_(msg) {
+        const t = $('toast');
+        t.textContent = msg;
+        t.classList.remove('hidden');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => t.classList.add('hidden'), 1800);
+    }
+    function scrollToList() { $('listPanel').scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    function scrollToForm() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
+    // Nhớ tên nhân viên để khỏi gõ lại mỗi lần mở trang
+    try { $('employeeName').value = localStorage.getItem('employee_name') || ''; } catch (e) {}
+    $('employeeName').addEventListener('input', function () {
+        try { localStorage.setItem('employee_name', this.value.trim()); } catch (e) {}
     });
 
     /* ---------- KHỞI ĐỘNG ---------- */
