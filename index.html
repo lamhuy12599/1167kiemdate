@@ -136,7 +136,9 @@
         .mono{ font-family:ui-monospace,Menlo,Consolas,monospace; font-size:12px; color:var(--muted); }
         .strong{ font-weight:600; }
         .th-sl{ background:#006c31; } .th-rut{ background:#065f46; } .th-pull{ background:var(--red); cursor:pointer; user-select:none; }
-        .th-scan{ background:#27272a; } .th-policy{ background:#115e59; } .th-emp{ background:#3f3f46; } .th-cd{ background:#b45309; }
+        .th-scan{ background:#27272a; } .th-policy{ background:#115e59; } .th-emp{ background:#3f3f46; } .th-area{ background:#1d4ed8; } .th-cd{ background:#b45309; }
+        td.area{ font-weight:600; color:#1d4ed8; }
+        .dark td.area{ color:#93c5fd; }
         td.qty{ font-weight:700; background:var(--tint-gray); }
         td.pt{ font-weight:700; color:var(--green-d); background:var(--tint-green); }
         td.pd{ font-weight:700; color:var(--red-d); background:var(--tint-red); }
@@ -232,6 +234,24 @@
             .del{ width:44px; height:44px; font-size:18px; }
         }
 
+
+        /* ============ IPAD / MÁY TÍNH BẢNG: bảng tự co vừa chiều ngang màn hình, không phải cuộn ngang ============ */
+        @media screen and (min-width:768px) and (max-width:1180px){
+            .container{ padding:10px; padding-left:max(10px,env(safe-area-inset-left)); padding-right:max(10px,env(safe-area-inset-right)); }
+            .panel{ padding:12px; }
+            .table-wrap{ overflow-x:visible; }
+            table{ width:100%; table-layout:auto; font-size:12px; }
+            th, td{ padding:6px 4px; white-space:normal; word-break:break-word; line-height:1.25; }
+            th{ font-size:11px; }
+            td:first-child{ word-break:break-all; }
+            td.mono, .mono{ font-size:11px; }
+            td.pol{ min-width:0; max-width:none; font-size:11px; }
+            td:nth-child(2){ min-width:110px; }
+            .cd{ white-space:normal; font-size:11px; padding:2px 7px; }
+            .filters .f{ min-width:140px; flex:1 1 140px; }
+            .btn-row{ gap:6px; }
+        }
+
         /* ============ IN ẤN: A4 đứng (điện thoại Android bỏ qua A4 ngang nên trang bị trống) ============ */
         @page{ size:A4 portrait; margin:8mm; }
         @media print{
@@ -272,7 +292,8 @@
         body.report-print th{ white-space:normal !important; }
         body.report-print td:first-child, body.report-print td:nth-child(4), body.report-print td.pd, body.report-print td.pt, body.report-print td.qty{ white-space:nowrap !important; }
         body.report-print td.mono{ white-space:normal; }
-        body.report-print th.th-policy{ width:25%; }
+        body.report-print th.th-policy{ width:21%; }
+        body.report-print th.th-area{ width:9%; }
         body.report-print thead th:nth-child(2){ width:21%; }
         body.report-print th.th-cd{ width:11%; }
         body.report-print th.th-emp{ width:8%; }
@@ -290,6 +311,8 @@
         body.report-print th.th-scan{ background:#27272a !important; }
         body.report-print th.th-policy{ background:#115e59 !important; }
         body.report-print th.th-emp{ background:#3f3f46 !important; }
+        body.report-print th.th-area{ background:#1d4ed8 !important; }
+        body.report-print td.area{ color:#1d4ed8 !important; font-weight:600 !important; }
         body.report-print th.th-cd{ background:#b45309 !important; }
         body.report-print td.qty{ background:#f4f4f5 !important; font-weight:700 !important; }
         body.report-print td.pt{ background:#ecfdf3 !important; color:#006c31 !important; font-weight:700 !important; }
@@ -349,6 +372,11 @@
                 <div class="box field">
                     <label for="employeeName">👤 Tên Nhân Viên Kiểm Date</label>
                     <input type="text" id="employeeName" class="input input-bold" placeholder="Nhập tên của bạn...">
+                </div>
+
+                <div class="box field">
+                    <label for="checkArea">📍 Khu Vực Kiểm Date</label>
+                    <input type="text" id="checkArea" class="input input-bold" placeholder="VD: Tủ mát, Kệ snack, Kho..." autocomplete="off">
                 </div>
 
                 <div class="field">
@@ -431,6 +459,7 @@
                                 <th class="c th-scan">Ngày Giờ Quét</th>
                                 <th class="c th-policy">Đổi Trả NCC</th>
                                 <th class="c th-emp">Nhân Viên</th>
+                                <th class="c th-area">Khu Vực</th>
                                 <th class="c no-print">Xóa</th>
                             </tr>
                         </thead>
@@ -469,6 +498,14 @@
                     <label for="reportDate">Hoặc chọn đúng 1 ngày</label>
                     <input type="date" id="reportDate" class="input" oninput="renderReport()">
                 </div>
+                <div class="f">
+                    <label for="reportEmp">Lọc theo nhân viên</label>
+                    <select id="reportEmp" class="input" onchange="renderReport()"><option value="">Tất cả nhân viên</option></select>
+                </div>
+                <div class="f">
+                    <label for="reportArea">Lọc theo khu vực kiểm</label>
+                    <select id="reportArea" class="input" onchange="renderReport()"><option value="">Tất cả khu vực</option></select>
+                </div>
                 <button class="btn" onclick="resetReportFilter()">Bỏ lọc</button>
             </div>
 
@@ -487,6 +524,7 @@
                             <th class="c th-scan">Ngày Giờ Quét</th>
                             <th class="c th-policy">Đổi Trả NCC</th>
                             <th class="c th-emp">Nhân Viên</th>
+                            <th class="c th-area">Khu Vực</th>
                             <th class="c th-cd">Đếm Ngược Đến Ngày Rút</th>
                             <th class="no-print th-del" aria-label="Xóa"></th>
                         </tr>
@@ -991,6 +1029,7 @@
                 <td class="c mono span2" data-label="Quét lúc">${esc_(it.timestamp)}</td>
                 <td class="c pol span3" data-label="Đổi trả NCC">${esc_(it.returnPolicy) || '-'}</td>
                 <td class="c" data-label="Nhân viên">${esc_(it.employeeName)}</td>
+                <td class="c area" data-label="Khu vực">${esc_(it.area) || '-'}</td>
                 <td class="c no-print delc"><button class="del" aria-label="Xóa" onclick="deleteItem(${i})">✕</button></td>
             </tr>`).join('');
     }
@@ -1003,7 +1042,10 @@
         const expiryDate = $('expiryDate').value;
         const pullType = $('pullType').value;
 
+        const area = $('checkArea').value.trim();
+
         if (!employeeName) { alert("Vui lòng nhập Tên nhân viên trước!"); return; }
+        if (!area) { alert("Vui lòng nhập Khu vực kiểm date trước!"); return; }
         if (!name || !expiryDate) { alert("Vui lòng điền tên sản phẩm và chọn ngày hết hạn!"); return; }
 
         const now = new Date();
@@ -1013,7 +1055,7 @@
         dateInventory.push({
             barcode, name, quantity, expiryDate, pullType,
             pullDate: calculatePullDate(expiryDate, pullType),
-            employeeName, timestamp, returnPolicy: currentReturnPolicy
+            employeeName, area, timestamp, returnPolicy: currentReturnPolicy
         });
         applySort();
         saveInventory_();
@@ -1092,13 +1134,14 @@
             { header: "Ngày Phải Rút", key: "pullDate", width: 18 },
             { header: "Ngày Giờ Quét", key: "timestamp", width: 22 },
             { header: "Điều Kiện Đổi Trả (NCC)", key: "returnPolicy", width: 22 },
-            { header: "Nhân Viên Kiểm", key: "employeeName", width: 18 }
+            { header: "Nhân Viên Kiểm", key: "employeeName", width: 18 },
+            { header: "Khu Vực Kiểm", key: "area", width: 20 }
         ];
         dateInventory.forEach(it => {
             ws.addRow({
                 barcode: it.barcode || "---", name: it.name, quantity: it.quantity,
                 expiryDate: fmtISODate_(it.expiryDate), pullType: it.pullType, pullDate: it.pullDate,
-                timestamp: it.timestamp, returnPolicy: it.returnPolicy || "-", employeeName: it.employeeName
+                timestamp: it.timestamp, returnPolicy: it.returnPolicy || "-", employeeName: it.employeeName, area: it.area || "-"
             });
         });
 
@@ -1118,7 +1161,7 @@
                 cell.alignment = { vertical: 'middle' };
                 cell.border = { bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } }, right: { style: 'thin', color: { argb: 'FFE2E8F0' } } };
             });
-            ['barcode', 'quantity', 'expiryDate', 'pullType', 'pullDate', 'timestamp', 'returnPolicy', 'employeeName']
+            ['barcode', 'quantity', 'expiryDate', 'pullType', 'pullDate', 'timestamp', 'returnPolicy', 'employeeName', 'area']
                 .forEach(k => { row.getCell(k).alignment = { vertical: 'middle', horizontal: 'center' }; });
             row.getCell('quantity').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF4F4F5' } };
             row.getCell('pullType').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDCFCE7' } };
@@ -1143,6 +1186,7 @@
     let reportLoading = false;
     let reportSortDir = 'asc';
     let reportLoadedAt = '';
+    const PURGE_AFTER_DAYS = 3;   // giữ dòng trong báo cáo đến 3 ngày sau ngày hết date rồi mới xóa (khớp backend)
 
     function setReportStatus_(text, cls) {
         const el = $('reportStatus');
@@ -1160,6 +1204,7 @@
             const json = await res.json();
             if (!json || json.status !== 'success') throw new Error((json && (json.message || json.error)) || 'Lỗi không xác định');
             reportRows = Array.isArray(json.rows) ? json.rows : [];
+            fillReportFilters_();
             const time = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
             reportLoadedAt = time + ' ' + new Date().toLocaleDateString('vi-VN');
             renderReport();
@@ -1195,9 +1240,28 @@
         }
     }
 
+    // Đổ danh sách nhân viên / khu vực có trong báo cáo vào 2 ô lọc (giữ lại lựa chọn đang chọn nếu còn)
+    const NO_AREA = '__none__';
+    function fillReportFilters_() {
+        const fill = (id, label, values, hasBlank) => {
+            const el = $(id), cur = el.value;
+            const uniq = Array.from(new Set(values.filter(Boolean))).sort((a, b) => a.localeCompare(b, 'vi'));
+            el.innerHTML = `<option value="">${label}</option>` +
+                uniq.map(v => `<option value="${esc_(v)}">${esc_(v)}</option>`).join('') +
+                (hasBlank ? `<option value="${NO_AREA}">(Chưa ghi)</option>` : '');
+            el.value = Array.from(el.options).some(o => o.value === cur) ? cur : '';
+        };
+        const emps = reportRows.map(r => String(r.employeeName || '').trim());
+        const areas = reportRows.map(r => String(r.area || '').trim());
+        fill('reportEmp', 'Tất cả nhân viên', emps, emps.some(v => !v));
+        fill('reportArea', 'Tất cả khu vực', areas, areas.some(v => !v));
+    }
+
     function resetReportFilter() {
         $('reportFilter').value = 'all';
         $('reportDate').value = '';
+        $('reportEmp').value = '';
+        $('reportArea').value = '';
         renderReport();
     }
     function toggleReportSort() {
@@ -1207,7 +1271,11 @@
 
     function renderReport() {
         const sel = $('reportFilter').value, day = $('reportDate').value;
+        const emp = $('reportEmp').value, area = $('reportArea').value;
         let rows = reportRows.filter(r => {
+            const rEmp = String(r.employeeName || '').trim(), rArea = String(r.area || '').trim();
+            if (emp && (emp === NO_AREA ? rEmp : rEmp !== emp)) return false;
+            if (area && (area === NO_AREA ? rArea : rArea !== area)) return false;
             if (day) return r.pullISO === day;
             if (r.pullDaysLeft == null) return sel === 'all';
             if (sel === 'due') return r.pullDaysLeft <= 0;
@@ -1223,13 +1291,20 @@
         $('reportSortIcon').textContent = reportSortDir === 'asc' ? '▲' : '▼';
 
         const dueCount = rows.filter(r => r.pullDaysLeft != null && r.pullDaysLeft <= 0).length;
-        $('reportSummary').textContent = `Hiển thị ${rows.length}/${reportRows.length} dòng · ${dueCount} dòng phải rút hôm nay` + (reportLoadedAt ? ` · Dữ liệu lúc ${reportLoadedAt}` : '');
+        const filterTxt = (emp ? ` · NV: ${emp === NO_AREA ? '(chưa ghi)' : emp}` : '') + (area ? ` · Khu vực: ${area === NO_AREA ? '(chưa ghi)' : area}` : '');
+        $('reportSummary').textContent = `Hiển thị ${rows.length}/${reportRows.length} dòng · ${dueCount} dòng phải rút hôm nay` + filterTxt + (reportLoadedAt ? ` · Dữ liệu lúc ${reportLoadedAt}` : '');
         $('reportEmpty').classList.toggle('hidden', rows.length > 0);
 
         $('reportList').innerHTML = rows.map(r => {
             const d = r.daysLeft;
             let cdText = '-', cdCls = 'cd-na';
-            if (d != null) {
+            const e = r.expiryDaysLeft;
+            if (e != null && e < 0) {
+                // Đã hết date: vẫn giữ trong báo cáo thêm PURGE_AFTER_DAYS ngày rồi mới tự xóa
+                const left = PURGE_AFTER_DAYS + 1 + e;
+                cdText = `Hết date ${-e} ngày · ` + (left <= 1 ? 'xóa ngày mai' : `xóa sau ${left} ngày`);
+                cdCls = 'cd-red';
+            } else if (d != null) {
                 cdText = d < 0 ? 'Quá ngày rút' : (d === 0 ? 'Hôm nay phải rút' : `Còn ${d} ngày`);
                 cdCls = d <= 1 ? 'cd-red' : (d <= 3 ? 'cd-orange' : 'cd-green');
             }
@@ -1245,6 +1320,7 @@
                 <td class="c mono span2" data-label="Quét lúc">${esc_(r.scannedAt)}</td>
                 <td class="c pol span3" data-label="Đổi trả NCC">${esc_(r.returnPolicy) || '-'}</td>
                 <td class="c" data-label="Nhân viên">${esc_(r.employeeName)}</td>
+                <td class="c area" data-label="Khu vực">${esc_(r.area) || '-'}</td>
                 <td class="c cdc span3" data-label="Đếm ngược đến ngày rút"><span class="cd ${cdCls}">${cdText}</span></td>
                 <td class="c no-print delc"><button class="del" aria-label="Xóa dòng" title="Xóa dòng" onclick="deleteReportRow(${reportRows.indexOf(r)})">✕</button></td>
             </tr>`;
@@ -1434,6 +1510,10 @@
     try { $('employeeName').value = localStorage.getItem('employee_name') || ''; } catch (e) {}
     $('employeeName').addEventListener('input', function () {
         try { localStorage.setItem('employee_name', this.value.trim()); } catch (e) {}
+    });
+    try { $('checkArea').value = localStorage.getItem('check_area') || ''; } catch (e) {}
+    $('checkArea').addEventListener('input', function () {
+        try { localStorage.setItem('check_area', this.value.trim()); } catch (e) {}
     });
 
     /* ---------- KHỞI ĐỘNG ---------- */
